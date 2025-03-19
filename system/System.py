@@ -3,6 +3,27 @@ import system.Group as Group
 import system.Role as Role
 import system.User as User
 import xml.etree.ElementTree as ET
+import json
+import datetime
+
+
+def findRoleByTitle(inputTitle: str, rolesList: list[Role.Role]) -> Role.Role:
+    for tempRoleVal1 in rolesList:
+        if(tempRoleVal1.getDetails()[0]==inputTitle):
+            return tempRoleVal1
+    return None
+    
+def findUserByUserName(inputUserName: str, usersList: list[User.User]) -> User.User:
+    for tempUserVal1 in usersList:
+        if(tempUserVal1.getUserName()==inputUserName):
+            return tempUserVal1
+    return None
+
+def findGroupByName(inputName: str, groupsList: list[Group.Group]) -> Group.Group:
+    for tempGroupVal1 in groupsList:
+        if(tempGroupVal1.getDetails()[0]==inputName):
+            return tempGroupVal1
+    return None
 
 class System:
     def __init__(self):
@@ -39,7 +60,9 @@ class System:
         xml_filename = "instance.xml"
         xml_path = os.path.join(parent_directory, xml_filename)
         if os.path.exists(xml_path):
-            os.remove(xml_path)
+            old_xml_path = xml_path 
+            backup_xml_path = os.path.join(parent_directory, f"instance-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xml")
+            os.rename(old_xml_path, backup_xml_path)
         root = ET.Element("System")
         customerName = ET.SubElement(root,"customerName")
         customerName.text = self.customerName
@@ -67,7 +90,7 @@ class System:
             user_password.text = userVal.getPassword()
             user_role = ET.SubElement(user_tab, "RoleName")
             userRole = userVal.getRole()
-            user_role.text = userRole.getDetails()[0]
+            user_role.text = userRole.getDetails()[0] if userRole else "No Role Assigned"
             user_groups_tab = ET.SubElement(user_tab,"Groups")
             for tempGroup in userVal.getGroups():
                 user_group_tab = ET.SubElement(user_groups_tab,"GroupName")
@@ -80,9 +103,53 @@ class System:
             role_desc = ET.SubElement(role_tab, "Description")
             role_desc.text = role_dets[1]
             role_perm = ET.SubElement(role_tab, "Permissions")
-            role_perm.text = roleVal.getPermissions()
+            role_perm.text = json.dumps(roleVal.getPermissions())
             role_users_tab = ET.SubElement(role_tab, "Users")
             for tempUser in roleVal.getUsers():
                 role_user_tab = ET.SubElement(role_users_tab, "Username")
-                role_users_tab.text = tempUser.getUserName()
+                role_user_tab.text = tempUser.getUserName()
+        tree = ET.ElementTree(root)
+        with open(xml_path, "wb") as file:
+            tree.write(file, encoding="utf-8", xml_declaration=True)
+
+    
+    def loadInstance(self, instanceFile: str = os.path.join(os.path.abspath(os.path.join(os.getcwd(), os.pardir)), "instance.xml")):
+        tree = ET.parse(instanceFile)
+        root = tree.getroot()
+        self.customerName = root.find("customerName").text
+        self.contactEmail = root.find("customerEmail").text
+        self.domain = root.find("domain").text
+        self.groups = []
+        self.roles = []
+        self.users = []
+        for tempRole_loop in root.find("Roles").findall("Role"):
+            tempRole = Role.Role(
+                roleTitle=tempRole_loop.get("Title"),
+                roleDescription=tempRole_loop.find("Description").text,
+                permissions=json.loads(tempRole_loop.find("Permissions").text)
+            )
+            self.roles.append(tempRole)
+        for tempUser_loop in root.find("Users").findall("User"):
+            tempUser = User.User(
+                userName=tempUser_loop.get("Username"),
+                password=tempUser_loop.find("Password").text,
+                roleinfo=findRoleByTitle(tempUser_loop.find("RoleName").text,self.roles)
+            )
+            self.users.append(tempUser)
+        for tempGroup_loop in root.find("Groups").findall("Group"):
+            usersInGroup = []
+            for usname in tempGroup_loop.find("UsersInGroup").findall("username"):
+                usersInGroup.append(findUserByUserName(usname.text,self.users))
+            tempGroup = Group.Group(
+                title=tempGroup_loop.get("Title"),
+                description=tempGroup_loop.find("Description").text,
+                users=usersInGroup
+            )
+            self.groups.append(tempGroup)
+        for tempUser_loop1 in self.users:
+            tempUser_loop1.getRole().addUser(tempUser_loop1)
+        for temp_User_Loop_Group in root.find("Users").findall("User"):
+            thisUserObj = findUserByUserName(temp_User_Loop_Group.get("Username"),self.users)
+            for temp_User_Group_Loop in temp_User_Loop_Group.find("Groups").findall("GroupName"):
+                thisUserObj.addToGroup(findGroupByName(temp_User_Group_Loop.text,self.groups))
         
