@@ -7,26 +7,67 @@ import json
 import datetime
 
 
-def findRoleByTitle(inputTitle: str, rolesList: list[Role.Role]) -> Role.Role:
+def findRoleByTitle(inputTitle: str, rolesList: list[Role.Role]) -> Role.Role|None:
+    """
+    Helper function to find a role by its title
+    Args:
+        inputTitle (str): The title of the role
+        rolesList (list[Role]): The list of roles to search
+    Returns:
+        Role: The role with the title, None if not found
+    """
     for tempRoleVal1 in rolesList:
         if(tempRoleVal1.getDetails()[0]==inputTitle):
             return tempRoleVal1
     return None
     
-def findUserByUserName(inputUserName: str, usersList: list[User.User]) -> User.User:
+def findUserByUserName(inputUserName: str, usersList: list[User.User]) -> User.User|None:
+    """
+    Helper function to find a user by its username
+    Args:
+        inputUserName (str): The username of the user
+        usersList (list[User]): The list of users to search
+    Returns:
+        User: The user with the username, None if not found
+    """
     for tempUserVal1 in usersList:
         if(tempUserVal1.getUserName()==inputUserName):
             return tempUserVal1
     return None
 
-def findGroupByName(inputName: str, groupsList: list[Group.Group]) -> Group.Group:
+def findGroupByName(inputName: str, groupsList: list[Group.Group]) -> Group.Group|None:
+    """
+    Helper function to find a group by its name
+    Args:
+        inputName (str): The name of the group
+        groupsList (list[Group]): The list of groups to search
+    Returns:
+        Group: The group with the name, None if not found
+    """
     for tempGroupVal1 in groupsList:
         if(tempGroupVal1.getDetails()[0]==inputName):
             return tempGroupVal1
     return None
 
 class System:
+    """
+    Class to represent the system
+    Attributes:
+        customerName (str): The name of the customer
+        contactEmail (str): The contact email of the customer
+        domain (str): The domain of the customer
+        groups (list[Group]): The list of groups in the system
+        roles (list[Role]): The list of roles in the system
+        users (list[User]): The list of users in the system
+    Methods:
+        setUpInstance(customerName:str, adminPassword:str, contactEmail:str, domain:str): Sets up the instance
+        saveInstance(): Saves the instance to an XML file
+        loadInstance(instanceFile:str): Loads the instance from an XML file
+    """
     def __init__(self):
+        """
+        Initializes the System object
+        """
         parent_directory = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         xml_filename = "instance.xml"
         xml_path = os.path.join(parent_directory, xml_filename)
@@ -34,6 +75,14 @@ class System:
             pass
 
     def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str):
+        """
+        Method to set up the instance
+        Args:
+            customerName (str): The name of the customer
+            adminPassword (str): The password of the admin
+            contactEmail (str): The contact email of the customer
+            domain (str): The domain of the customer
+        """
         self.customerName = customerName
         self.contactEmail = contactEmail
         self.domain = domain
@@ -56,6 +105,9 @@ class System:
         self.groups.append(tempGroup)
         
     def saveInstance(self):
+        """
+        Method to save the instance to an XML file
+        """
         parent_directory = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         xml_filename = "instance.xml"
         xml_path = os.path.join(parent_directory, xml_filename)
@@ -114,6 +166,11 @@ class System:
 
     
     def loadInstance(self, instanceFile: str = os.path.join(os.path.abspath(os.path.join(os.getcwd(), os.pardir)), "instance.xml")):
+        """
+        Method to load the instance from an XML file
+        Args:
+            instanceFile (str): The path to the XML file
+        """
         tree = ET.parse(instanceFile)
         root = tree.getroot()
         self.customerName = root.find("customerName").text
