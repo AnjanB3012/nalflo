@@ -28,3 +28,16 @@ class User:
     
     def addToGroup(self, newGroup: Group.Group):
         self.groups.append(newGroup)
+    
+    def __str__(self):
+        returningString = f"<username>{self.userName}</username>"
+        returningString += f"""
+<User_Role_Info>
+{str(self.roleInfo)}
+</User_Role_Info>
+<User_In_Groups>
+"""
+        for i in self.groups:
+            returningString += str(i)
+        returningString += "</User_In_Groups>"
+        return returningString
