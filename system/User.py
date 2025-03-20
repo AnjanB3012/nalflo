@@ -1,5 +1,6 @@
 import system.Role as Role
 import system.Group as Group
+import Task as Task
 
 class User:
     """
@@ -19,7 +20,7 @@ class User:
         addToGroup(newGroup:Group): Adds the user to a group
         __str__() -> str: Returns the username, role, and groups of the user
     """
-    def __init__(self, userName: str, password: str, roleinfo: Role.Role, groups: list[Group.Group]=[]):
+    def __init__(self, userName: str, password: str, roleinfo: Role, groups: list[Group]=[], tasks: list[Task]=[]):
         """
         Initializes the User object
         Args:
@@ -32,6 +33,7 @@ class User:
         self.password = password
         self.roleInfo = roleinfo
         self.groups = groups
+        self.tasks = tasks
     
     def getUserName(self) -> str:
         """
@@ -57,7 +59,7 @@ class User:
         """
         self.password = newPassword
     
-    def getRole(self) -> Role.Role:
+    def getRole(self) -> Role:
         """
         Getter for the role of the user
         Returns:
@@ -65,7 +67,7 @@ class User:
         """
         return self.roleInfo
     
-    def setRole(self, newRole: Role.Role):
+    def setRole(self, newRole: Role):
         """
         Setter for the role of the user
         Args:
@@ -73,7 +75,7 @@ class User:
         """
         self.roleInfo = newRole
     
-    def getGroups(self) -> list[Group.Group]:
+    def getGroups(self) -> list[Group]:
         """
         Getter for the groups the user is in
         Returns:
@@ -81,13 +83,29 @@ class User:
         """
         return self.groups
     
-    def addToGroup(self, newGroup: Group.Group):
+    def addToGroup(self, newGroup: Group):
         """
         Method to add the user to a group
         Args:
             newGroup (Group): The group to add the user to
         """
         self.groups.append(newGroup)
+
+    def getTasks(self) -> list[Task]:
+        """
+        Getter for the tasks of the user
+        Returns:
+            list[Task]: The tasks of the user
+        """
+        return self.tasks
+
+    def addTask(self, newTask: Task):
+        """
+        Method to add a task to the user
+        Args:
+            newTask (Task): The task to add to the user
+        """
+        self.tasks.append(newTask)
     
     def __str__(self):
         """

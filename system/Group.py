@@ -15,7 +15,7 @@ class Group:
         getDetails() -> list[str]: Returns the title and description of the group
         __str__() -> str: Returns the title and description
     """
-    def __init__(self,title:str, description: str, users: list[User.User] = []):
+    def __init__(self,title:str, description: str, users: list[User] = []):
         """
         Initializes the Group object
         Args:
@@ -27,7 +27,7 @@ class Group:
         self.description = description
         self.users = users
     
-    def getUsers(self) -> list[User.User]:
+    def getUsers(self) -> list[User]:
         """
         Getter for the list of users in the group
         Returns:
@@ -35,7 +35,7 @@ class Group:
         """
         return self.users
     
-    def addUser(self, newUser:User.User):
+    def addUser(self, newUser:User):
         """
         Method to add a user to the group
         Args:
@@ -43,7 +43,7 @@ class Group:
         """
         self.users.append(newUser)
 
-    def removeUser(self, removingUser:User.User):
+    def removeUser(self, removingUser:User):
         """
         Method to remove a user from the group
         Args:

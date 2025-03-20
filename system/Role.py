@@ -19,7 +19,7 @@ class Role:
         getDetails() -> list[str]: Returns the title and description of the role
         __str__() -> str: Returns the title and description
     """
-    def __init__(self,roleTitle: str, roleDescription: str, permissions: dict={}, users: list[User.User]=[]):
+    def __init__(self,roleTitle: str, roleDescription: str, permissions: dict={}, users: list[User]=[]):
         """
         Initializes the Role object
         Args:
@@ -62,7 +62,7 @@ class Role:
         """
         self.permissions[permissionName] = permissionValue
 
-    def getUsers(self) -> list[User.User]:
+    def getUsers(self) -> list[User]:
         """
         Getter for the list of users in the role
         Returns:
@@ -70,7 +70,7 @@ class Role:
         """
         return self.users
     
-    def addUser(self, newUser: User.User):
+    def addUser(self, newUser: User):
         """
         Method to add a user to the role
         Args:
@@ -78,7 +78,7 @@ class Role:
         """
         self.users.append(newUser)
 
-    def removeUser(self, userDet: User.User):
+    def removeUser(self, userDet: User):
         """
         Method to remove a user from the role
         Args:
