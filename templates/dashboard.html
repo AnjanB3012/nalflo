@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+</head>
+<body class="bg-gray-100">
+  <!-- Include Navbar Partial -->
+  <div class="fixed w-full z-10">
+    <!-- Copy the contents of partials/navbar.html here -->
+    <nav class="bg-white bg-opacity-30 backdrop-blur-md shadow-md p-4 flex justify-between items-center">
+      <div class="text-xl font-bold">My Dashboard</div>
+      <div>
+        <a href="{{url_for('home')}}" class="mx-2 hover:text-blue-500">Dashboard</a>
+        <a href="{{url_for('profile')}}" class="mx-2 hover:text-blue-500">Profile</a>
+        <a href="iam.html" class="mx-2 hover:text-blue-500">IAM</a>
+        <a href="dev-portal.html" class="mx-2 hover:text-blue-500">Dev Portal</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="flex pt-16">
+    <!-- Include Sidebar Partial -->
+    <div class="w-64 p-4">
+      <!-- Copy the contents of partials/sidebar.html here -->
+      <aside class="bg-white bg-opacity-30 backdrop-blur-md shadow-md h-full p-4">
+        <ul>
+          <li class="mb-2"><a href="{{url_for('home')}}" class="hover:text-blue-500">Dashboard</a></li>
+          <li class="mb-2"><a href="{{url_for('profile')}}" class="hover:text-blue-500">Profile</a></li>
+          <li class="mb-2"><a href="iam.html" class="hover:text-blue-500">IAM</a></li>
+          <li class="mb-2"><a href="dev-portal.html" class="hover:text-blue-500">Dev Portal</a></li>
+          <li class="mb-2"><a href="{{url_for('logout')}}" class="hover:text-blue-500">Logout</a></li>
+        </ul>
+      </aside>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4">
+      <div class="glass p-4 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
+        <table class="min-w-full bg-white bg-opacity-60 rounded-lg overflow-hidden">
+          <thead>
+            <tr>
+              <th class="py-2 px-4 bg-gray-200">Task</th>
+              <th class="py-2 px-4 bg-gray-200">Status</th>
+              <th class="py-2 px-4 bg-gray-200">Due Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b">
+              <td class="py-2 px-4">Design UI</td>
+              <td class="py-2 px-4">In Progress</td>
+              <td class="py-2 px-4">2025-03-25</td>
+            </tr>
+            <tr class="border-b">
+              <td class="py-2 px-4">Implement Backend</td>
+              <td class="py-2 px-4">Pending</td>
+              <td class="py-2 px-4">2025-04-05</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-4">Testing</td>
+              <td class="py-2 px-4">Completed</td>
+              <td class="py-2 px-4">2025-03-15</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

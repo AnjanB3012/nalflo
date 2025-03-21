@@ -289,6 +289,16 @@ class System:
             self.tasks.append(tempTask)
 
     #User Methods
+    def getUser(self,username:str) -> User:
+        """
+        Method to get a user
+        Args:
+            username (str): The username of the user
+        Returns:
+            User: The user object
+        """
+        return findUserByUserName(username,self.users)
+
     def createUser(self,username:str, password:str, roleName:str, groupNames:list[str]=[]):
         """
         Method to create a user
@@ -353,3 +363,20 @@ class System:
         tempUser = findUserByUserName(username,self.users)
         if tempUser:
             tempUser.setPassword(newPassword)
+
+    def loginUser(self, inputUsername: str, inputPassword: str) -> User:
+        """
+        Method to login a user
+        Args:
+            inputUsername (str): The username of the user
+            inputPassword (str): The password of the user
+        Returns:
+            bool: True if the login is successful, False otherwise
+        """
+        tempUser = findUserByUserName(inputUsername,self.users)
+        if tempUser:
+            if tempUser.getPassword()==inputPassword:
+                return tempUser
+            else:
+                return None
+        return None
