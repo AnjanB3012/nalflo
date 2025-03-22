@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Tailwind CSS CDN -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="templates/common.css">
 </head>
 <body class="bg-gray-100">
   <!-- Include Navbar Partial -->
@@ -17,7 +17,7 @@
       <div>
         <a href="{{url_for('home')}}" class="mx-2 hover:text-blue-500">Dashboard</a>
         <a href="{{url_for('profile')}}" class="mx-2 hover:text-blue-500">Profile</a>
-        <a href="iam.html" class="mx-2 hover:text-blue-500">IAM</a>
+        <a href="{{url_for('iam')}}" class="mx-2 hover:text-blue-500">IAM</a>
         <a href="dev-portal.html" class="mx-2 hover:text-blue-500">Dev Portal</a>
       </div>
     </nav>
@@ -31,7 +31,7 @@
         <ul>
           <li class="mb-2"><a href="{{url_for('home')}}" class="hover:text-blue-500">Dashboard</a></li>
           <li class="mb-2"><a href="{{url_for('profile')}}" class="hover:text-blue-500">Profile</a></li>
-          <li class="mb-2"><a href="iam.html" class="hover:text-blue-500">IAM</a></li>
+          <li class="mb-2"><a href="{{url_for('iam')}}" class="hover:text-blue-500">IAM</a></li>
           <li class="mb-2"><a href="dev-portal.html" class="hover:text-blue-500">Dev Portal</a></li>
           <li class="mb-2"><a href="{{url_for('logout')}}" class="hover:text-blue-500">Logout</a></li>
         </ul>

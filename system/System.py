@@ -380,3 +380,26 @@ class System:
             else:
                 return None
         return None
+    
+    def getSysGroups(self) -> list[Group]:
+        """
+        Method to get the groups in the system
+        Returns:
+            list[Group]: The list of groups in the system
+        """
+        return self.groups
+    
+    def addUserToGroups(self, username:str, groupNames:list[str]):
+        """
+        Method to add a user to groups
+        Args:
+            username (str): The username of the user
+            groupNames (list[str]): The names of the groups
+        """
+        tempUser = findUserByUserName(username,self.users)
+        if tempUser:
+            for tempGroup in groupNames:
+                tempGroup1 = findGroupByName(tempGroup,self.groups)
+                if tempGroup1:
+                    tempUser.addToGroup(tempGroup1)
+                    tempGroup1.addUser(tempUser)

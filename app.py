@@ -3,7 +3,7 @@ import system.Role as Role
 import system.Group as Group
 import system.User as User
 import os
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
@@ -76,10 +76,36 @@ def profile():
         if(roleperms[perm] == True):
             rolepermissions.append(perm)
     groups = signedInUser.getGroups()
-    groupList = []
-    for group in groups:
-        groupList.append(group.getDetails()[0])
+    groupList = {}
+    for i in range(len(groups)):
+        groupDet = groups[i].getDetails()
+        groupList[groupDet[0]] = groupDet[1]
     return render_template('profile.html', username=username, rolename=rolename, roledesc=roledesc, permissions=rolepermissions, groups=groupList, changedPassword=changedPassword)
+
+@app.route('/iam', methods=['GET', 'POST'])
+def iam():
+    signedInUser = tempSystem.getUser(session['user'])
+    username = signedInUser.getUserName()
+    sysGroups = tempSystem.getSysGroups()
+    userGroups = signedInUser.getGroups()
+    groupList = {}
+    for groupi in sysGroups:
+        if groupi in userGroups:
+            groupList[groupi.getDetails()[0]] = True
+        else:
+            groupList[groupi.getDetails()[0]] = False
+
+    return render_template('iam.html', username=username, groups=groupList)
+
+@app.route('/iam/users/update_groups', methods=['GET', 'POST'])
+def update_groups():
+    if request.method == "POST":
+        signedInUser = tempSystem.getUser(session['user'])
+        username = signedInUser.getUserName()
+        data = request.get_json()
+        checkedGroups = data['groups']
+        tempSystem.addUserToGroups(username, checkedGroups)
+        return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)
