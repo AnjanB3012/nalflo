@@ -1,14 +1,15 @@
 from datetime import datetime
 import system.User as User
-import Task as Task
+import system.Task as Task
 
 class Task:
-    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
+    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, assignedUsers: list[User], creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
         self.taskId = taskId
         self.title = titleName
         self.description = description
         self.creationTimeStamp = creationTimeStamp
-        self.assignedUsers = creatorUser
+        self.assignedUsers = assignedUsers
+        self.creatorUser = creatorUser
         self.status = status
         self.previousTask = previousTask
 
@@ -37,6 +38,9 @@ class Task:
     def getAssignedUsers(self) -> list[User]:
         return self.assignedUsers
     
+    def getCreatorUser(self) -> User:
+        return self.creatorUser
+    
     def getStatus(self) -> bool:
         return self.status
     
@@ -48,3 +52,6 @@ class Task:
     
     def getTaskId(self) -> int:
         return self.taskId
+    
+    def assignUser(self, user: User):
+        self.assignedUsers.append(user)

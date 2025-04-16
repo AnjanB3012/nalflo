@@ -3,7 +3,7 @@ import system.Group as Group
 import system.Role as Role
 import system.User as User
 import xml.etree.ElementTree as ET
-import Task as Task
+import system.Task as Task
 import json
 import datetime
 
@@ -209,6 +209,8 @@ class System:
             task_desc.text = taskVal.getDescription()
             task_creation_time = ET.SubElement(task_tab, "CreationTimeStamp")
             task_creation_time.text = str(taskVal.getCreationTimeStamp())
+            task_creator = ET.SubElement(task_tab, "CreatorUser")
+            task_creator.text = taskVal.getCreatorUser().getUserName()
             task_users_tab = ET.SubElement(task_tab, "UsersAssigned")
             for tempUser in taskVal.getAssignedUsers():
                 task_user_tab = ET.SubElement(task_users_tab, "Username")
@@ -282,7 +284,8 @@ class System:
                 titleName=tempTask_loop.find("Title").text,
                 description=tempTask_loop.find("Description").text,
                 creationTimeStamp=datetime.datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
-                creatorUser=usersAssigned,
+                assignedUsers=usersAssigned,
+                creatorUser=findUserByUserName(tempTask_loop.find("CreatorUser").text,self.users),
                 status=bool(tempTask_loop.find("Status").text),
                 previousTask=previousTasks
             )
@@ -403,3 +406,38 @@ class System:
                 if tempGroup1:
                     tempUser.addToGroup(tempGroup1)
                     tempGroup1.addUser(tempUser)
+    
+    def getSysRoles(self) -> list[Role]:
+        """
+        Method to get the roles in the system
+        Returns:
+            list[Role]: The list of roles in the system
+        """
+        return self.roles
+    
+    def changeUserRole(self, username:str, roleName:str):
+        """
+        Method to change the role of a user
+        Args:
+            username (str): The username of the user
+            roleName (str): The name of the role
+        """
+        tempUser = findUserByUserName(username,self.users)
+        if tempUser:
+            tempRole = findRoleByTitle(roleName,self.roles)
+            if tempRole:
+                tempUser.getRole().removeUser(tempUser)
+                tempUser.setRole(tempRole)
+                tempRole.addUser(tempUser)
+            else:
+                print("Role not found")
+        else:    
+            print("User not found")
+
+    def getSysUsers(self) -> list[User]:
+        """
+        Method to get the users in the system
+        Returns:
+            list[User]: The list of users in the system
+        """
+        return self.users
