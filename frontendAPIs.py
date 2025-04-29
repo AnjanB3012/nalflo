@@ -33,6 +33,7 @@ def setupInstance():
     contact_email = data.get('contactEmail')
     domain = data.get('domain')
     tempSystem.setUpInstance(customerName=customer_name, adminPassword=admin_password, contactEmail=contact_email, domain=domain)
+    tempSystem.saveInstance()
     return jsonify({"message": "Instance is Setup"})
 
 @app.route('/api/loginUser', methods=['POST'])
@@ -44,6 +45,41 @@ def loginUser():
         tempCookie = str(uuid4())
         cookies[tempCookie] = [username, datetime.now(timezone.utc)]
         return jsonify({"message": "Success", "cookie_token": tempCookie})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/getUserPermissions', methods=['POST'])
+def getUserPermissions():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        permissions = user.getRole().getPermissions()
+        response = {
+            "message": "Success",
+            "permissions": permissions
+        }
+        return jsonify(response)
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/api/iam/getUsers', methods=['POST'])
+def getUsers():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            users = tempSystem.getSysUsers()
+            response = {
+                "message": "Success",
+                "users": [user.toDict() for user in users]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
 if __name__ == '__main__':

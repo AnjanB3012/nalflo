@@ -130,19 +130,17 @@ class System:
         self.tasks = []
         self.permissions = ["tasks","forms","data","iam","apis"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
-            "tasks":True,
-            "forms": True,
-            "data":True,
-            "iam":True,
-            "apis":True
+            "home":True,
+            "iam": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
-        tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup])
+        tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
         tempGroup.addUser(tempUser)
         tempRole.addUser(tempUser)
         self.users.append(tempUser)
         self.roles.append(tempRole)
         self.groups.append(tempGroup)
+        self.setUpStatus = True
         
     def saveInstance(self):
         """
@@ -177,6 +175,8 @@ class System:
             user_tab.set("Username",userVal.getUserName())
             user_password = ET.SubElement(user_tab,"Password")
             user_password.text = userVal.getPassword()
+            user_name = ET.SubElement(user_tab,"Name")
+            user_name.text = userVal.getName()
             user_role = ET.SubElement(user_tab, "RoleName")
             userRole = userVal.getRole()
             user_role.text = userRole.getDetails()[0] if userRole else "No Role Assigned"
@@ -251,7 +251,9 @@ class System:
             tempUser = User.User(
                 userName=tempUser_loop.get("Username"),
                 password=tempUser_loop.find("Password").text,
-                roleinfo=findRoleByTitle(tempUser_loop.find("RoleName").text,self.roles)
+                roleinfo=findRoleByTitle(tempUser_loop.find("RoleName").text,self.roles),
+                groups=[],
+                tasks=[], name=tempUser_loop.find("Name").text
             )
             self.users.append(tempUser)
         for tempGroup_loop in root.find("Groups").findall("Group"):
@@ -302,7 +304,7 @@ class System:
         """
         return findUserByUserName(username,self.users)
 
-    def createUser(self,username:str, password:str, roleName:str, groupNames:list[str]=[]):
+    def createUser(self,username:str, password:str, roleName:str, groupNames:list[str]=[], name:str=""):
         """
         Method to create a user
         Args:
@@ -311,7 +313,7 @@ class System:
             roleName (str): The name of the role of the user
             groupNames (list[str]): The names of the groups the user is in
         """
-        tempUser = User.User(username,password,findRoleByTitle(roleName,self.roles))
+        tempUser = User.User(username,password,findRoleByTitle(roleName,self.roles),[],[],name)
         self.users.append(tempUser)
         for tempGroup in groupNames:
             tempGroup1 = findGroupByName(tempGroup,self.groups)

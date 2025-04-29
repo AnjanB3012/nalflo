@@ -20,7 +20,7 @@ class User:
         addToGroup(newGroup:Group): Adds the user to a group
         __str__() -> str: Returns the username, role, and groups of the user
     """
-    def __init__(self, userName: str, password: str, roleinfo: Role, groups: list[Group]=[], tasks: list[Task]=[]):
+    def __init__(self, userName: str, password: str, roleinfo: Role, groups: list[Group]=[], tasks: list[Task]=[], name: str=""):
         """
         Initializes the User object
         Args:
@@ -34,6 +34,7 @@ class User:
         self.roleInfo = roleinfo
         self.groups = groups
         self.tasks = tasks
+        self.name = name
     
     def getUserName(self) -> str:
         """
@@ -42,6 +43,22 @@ class User:
             str: The username of the user
         """
         return self.userName
+    
+    def getName(self) -> str:
+        """
+        Getter for the name of the user
+        Returns:
+            str: The name of the user
+        """
+        return self.name
+    
+    def setName(self, newName: str):
+        """
+        Setter for the name of the user
+        Args:
+            newName (str): The new name of the user
+        """
+        self.name = newName
     
     def getPassword(self) -> str:
         """
@@ -124,3 +141,16 @@ class User:
             returningString += str(i)
         returningString += "</User_In_Groups>"
         return returningString
+    
+    def toDict(self):
+        """
+        Converts the user to a dictionary
+        Returns:
+            dict: The user as a dictionary
+        """
+        return {
+            "userName": self.userName,
+            "password": self.password,
+            "roleInfo": self.getRole().getDetails()[0],
+            "name": self.name
+        }
