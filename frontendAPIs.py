@@ -82,5 +82,57 @@ def getUsers():
             return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
+    
+@app.route('/api/home/getUserTasks', methods=['POST'])
+def getUserTasks():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        tasks = user.getTasks()
+        response = {
+            "message": "Success",
+            "tasks": [task.toDict() for task in tasks]
+        }
+        return jsonify(response)
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/iam/getAllRoleNames', methods=['POST'])
+def getAllRoles():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            roles = tempSystem.getSysRoles()
+            response = {
+                "message": "Success",
+                "roles": [role.getDetails()[0] for role in roles]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/api/iam/changeUserRole', methods=['POST'])
+def changeUserRole():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            target_username = data.get('target_username')
+            new_role_name = data.get('new_role_name')
+            tempSystem.changeUserRole(username=target_username, newRoleName=new_role_name)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

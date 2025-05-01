@@ -1,4 +1,8 @@
 function Navbar({ HomePermission, IAMPermission }) {
+    const handleLogout = () => {
+        localStorage.removeItem("local_cookie");
+        window.location.href = "/";
+    };
     return (
         <nav
             style={{
@@ -39,6 +43,19 @@ function Navbar({ HomePermission, IAMPermission }) {
                         IAM
                     </a>
                 )}
+                <button
+                    onClick={handleLogout}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        fontSize: '16px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Logout
+                </button>
             </div>
         </nav>
     );

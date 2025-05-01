@@ -443,3 +443,22 @@ class System:
             list[User]: The list of users in the system
         """
         return self.users
+    
+    def changeUserRole(self, username:str, roleName:str):
+        """
+        Method to change the role of a user
+        Args:
+            username (str): The username of the user
+            roleName (str): The name of the role
+        """
+        tempUser = findUserByUserName(username,self.users)
+        if tempUser:
+            tempRole = findRoleByTitle(roleName,self.roles)
+            if tempRole:
+                tempUser.getRole().removeUser(tempUser)
+                tempUser.setRole(tempRole)
+                tempRole.addUser(tempUser)
+            else:
+                print("Role not found")
+        else:    
+            print("User not found")

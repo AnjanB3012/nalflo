@@ -106,3 +106,16 @@ class Role:
         {self.roleDescription}
         </Role_Description>
         """
+    
+    def toDict(self) -> dict:
+        """
+        Converts the role to a dictionary
+        Returns:
+            dict: The role as a dictionary
+        """
+        return {
+            "roleTitle": self.roleTitle,
+            "roleDescription": self.roleDescription,
+            "permissions": self.permissions,
+            "users": [user.toDict() for user in self.users]
+        }

@@ -55,3 +55,15 @@ class Task:
     
     def assignUser(self, user: User):
         self.assignedUsers.append(user)
+
+    def toDict(self):
+        return {
+            "taskId": self.taskId,
+            "title": self.title,
+            "description": self.description,
+            "creationTimeStamp": str(self.creationTimeStamp),
+            "assignedUsers": [user.toDict() for user in self.assignedUsers],
+            "creatorUser": self.creatorUser.toDict(),
+            "status": self.status,
+            "previousTask": [task.toDict() for task in self.previousTask]
+        }

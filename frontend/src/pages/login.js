@@ -7,6 +7,11 @@ function Login() {
     const [data, setData] = useState(null);
     const navigate = useNavigate();
 
+    const loginCred = localStorage.getItem("local_cookie");
+    if (loginCred) {
+        navigate("/home");
+    }
+
     useEffect(() => {
         fetch("http://localhost:8080/api/homeCheck")
             .then((response) => response.json())
