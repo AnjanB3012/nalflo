@@ -7,10 +7,6 @@ function IAM() {
     const [permissions, setPermissions] = useState(null);
     const [error, setError] = useState(false);
     const [users, setUsers] = useState([]);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [roles, setRoles] = useState([]);
-    const [newRole, setNewRole] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -59,26 +55,6 @@ function IAM() {
                                 console.error("Error fetching users:", err);
                                 setError(true);
                             });
-
-                        // Fetch roles
-                        fetch("http://localhost:8080/api/iam/getAllRoleNames", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({ cookie_token: cookieToken }),
-                        })
-                            .then((response) => response.json())
-                            .then((roleData) => {
-                                if (roleData.message === "Success") {
-                                    setRoles(roleData.roles);
-                                } else {
-                                    console.error("Failed to fetch roles:", roleData.message);
-                                }
-                            })
-                            .catch((err) => {
-                                console.error("Error fetching roles:", err);
-                            });
                     } else {
                         console.error("IAM permission is missing or false.");
                         setError(true);
@@ -94,62 +70,12 @@ function IAM() {
             });
     }, []);
 
-    const handleRoleChangeClick = (user) => {
-        setSelectedUser(user);
-        setNewRole(user.roleInfo); // Preselect the user's current role
-        setDialogOpen(true);
-    };
-
-    const handleDialogClose = () => {
-        setDialogOpen(false);
-        setSelectedUser(null);
-        setNewRole("");
-    };
-
-    const handleSaveRoleChange = () => {
-        const cookieData = localStorage.getItem("local_cookie");
-        if (!cookieData) {
-            console.error("No cookie found. Please log in.");
-            return;
-        }
-
-        const parsedCookie = JSON.parse(cookieData);
-        const cookieToken = parsedCookie.token;
-
-        fetch("http://localhost:8080/api/iam/changeUserRole", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                target_username: selectedUser.userName,
-                new_role_name: newRole,
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.message === "Success") {
-                    alert("Role updated successfully!");
-                    setUsers((prevUsers) =>
-                        prevUsers.map((user) =>
-                            user.userName === selectedUser.userName
-                                ? { ...user, roleInfo: newRole }
-                                : user
-                        )
-                    );
-                    handleDialogClose();
-                } else {
-                    console.error("Failed to update role:", data.message);
-                }
-            })
-            .catch((err) => {
-                console.error("Error updating role:", err);
-            });
-    };
-
     const handleCreateNewUserClick = () => {
         navigate("/createNewUser");
+    };
+
+    const handleViewUserClick = (userName) => {
+        window.open(`/viewUser/${userName}`, '_blank', 'width=800,height=600');
     };
 
     if (error) {
@@ -194,7 +120,19 @@ function IAM() {
                                     <td>{user.name}</td>
                                     <td>{user.roleInfo}</td>
                                     <td>
-                                        <button onClick={() => handleRoleChangeClick(user)}>Change Role</button>
+                                        <button 
+                                            onClick={() => handleViewUserClick(user.userName)}
+                                            style={{
+                                                padding: "8px 16px",
+                                                backgroundColor: "#28a745",
+                                                color: "#fff",
+                                                border: "none",
+                                                borderRadius: "4px",
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            View User
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -202,71 +140,6 @@ function IAM() {
                     </table>
                 </div>
             </div>
-            {dialogOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: "0",
-                        left: "0",
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
-                >
-                    <div
-                        style={{
-                            backgroundColor: "#fff",
-                            padding: "20px",
-                            borderRadius: "8px",
-                            width: "400px",
-                        }}
-                    >
-                        <h2>Change Role for {selectedUser?.name}</h2>
-                        <select
-                            value={newRole}
-                            onChange={(e) => setNewRole(e.target.value)}
-                            style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-                        >
-                            {roles.map((role) => (
-                                <option key={role} value={role}>
-                                    {role}
-                                </option>
-                            ))}
-                        </select>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <button
-                                onClick={handleSaveRoleChange}
-                                style={{
-                                    padding: "8px 16px",
-                                    backgroundColor: "#007BFF",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Save
-                            </button>
-                            <button
-                                onClick={handleDialogClose}
-                                style={{
-                                    padding: "8px 16px",
-                                    backgroundColor: "#FF0000",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

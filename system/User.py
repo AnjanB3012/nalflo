@@ -152,5 +152,6 @@ class User:
             "userName": self.userName,
             "password": self.password,
             "roleInfo": self.getRole().getDetails()[0],
+            "groups": [group.getDetails()[0] for group in self.groups],
             "name": self.name
         }

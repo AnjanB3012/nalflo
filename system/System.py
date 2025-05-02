@@ -128,7 +128,7 @@ class System:
         self.roles = []
         self.users = []
         self.tasks = []
-        self.permissions = ["tasks","forms","data","iam","apis"]
+        self.permissions = ["home","iam"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
             "iam": True
@@ -470,3 +470,11 @@ class System:
             str: The domain of the system
         """
         return self.domain
+    
+    def getPermissions(self) -> list[str]:
+        """
+        Method to get the permissions of the system
+        Returns:
+            list[str]: The permissions of the system
+        """
+        return self.permissions

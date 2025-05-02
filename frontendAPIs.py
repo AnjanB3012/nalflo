@@ -159,5 +159,27 @@ def getDomain():
     domain = tempSystem.getDomain()
     return jsonify({"domain": domain})
 
+@app.route('/api/iam/viewUser', methods=['POST'])
+def viewUser():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            target_username = data.get('target_username')  # Debug print
+            target_user = tempSystem.getUser(username=target_username)
+            if target_user is None: # Debug print
+                return jsonify({"message": "User not found"})
+            response = {
+                "message": "Success",
+                "user": target_user.toDict()
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
 if __name__ == '__main__':
     app.run(debug=True, port=8080)
