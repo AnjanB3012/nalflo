@@ -141,6 +141,7 @@ class System:
         self.roles.append(tempRole)
         self.groups.append(tempGroup)
         self.setUpStatus = True
+        self.saveInstance()
         
     def saveInstance(self):
         """
@@ -150,6 +151,9 @@ class System:
         if os.path.exists(xml_filename):
             old_xml_path = xml_filename 
             os.rename(old_xml_path, f"instance-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xml")
+        xml_filename = "instance.xml"
+        with open(xml_filename, "w") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         root = ET.Element("System")
         customerName = ET.SubElement(root,"customerName")
         customerName.text = self.customerName
@@ -430,7 +434,8 @@ class System:
             if tempRole:
                 tempUser.getRole().removeUser(tempUser)
                 tempUser.setRole(tempRole)
-                tempRole.addUser(tempUser)
+                if tempUser not in tempRole.getUsers():
+                    tempRole.addUser(tempUser)
             else:
                 print("Role not found")
         else:    
@@ -444,25 +449,6 @@ class System:
         """
         return self.users
     
-    def changeUserRole(self, username:str, roleName:str):
-        """
-        Method to change the role of a user
-        Args:
-            username (str): The username of the user
-            roleName (str): The name of the role
-        """
-        tempUser = findUserByUserName(username,self.users)
-        if tempUser:
-            tempRole = findRoleByTitle(roleName,self.roles)
-            if tempRole:
-                tempUser.getRole().removeUser(tempUser)
-                tempUser.setRole(tempRole)
-                tempRole.addUser(tempUser)
-            else:
-                print("Role not found")
-        else:    
-            print("User not found")
-
     def getDomain(self) -> str:
         """
         Method to get the domain of the system
@@ -478,3 +464,36 @@ class System:
             list[str]: The permissions of the system
         """
         return self.permissions
+
+    def createRole(self, roleTitle: str, roleDescription: str, permissions: dict):
+        """
+        Method to create a new role
+        Args:
+            roleTitle (str): The title of the role
+            roleDescription (str): The description of the role
+            permissions (dict): The permissions of the role
+        """
+        tempRole = Role.Role(roleTitle, roleDescription, permissions)
+        self.roles.append(tempRole)
+
+    def updateRolePermissions(self, roleName: str, permissions: dict):
+        """
+        Method to update the permissions of a role
+        Args:
+            roleName (str): The name of the role
+            permissions (dict): The new permissions
+        """
+        tempRole = findRoleByTitle(roleName, self.roles)
+        if tempRole:
+            for permission, value in permissions.items():
+                tempRole.updatePermission(permission, value)
+
+    def findRoleByTitle(self, roleTitle: str) -> Role:
+        """
+        Method to find a role by its title
+        Args:
+            roleTitle (str): The title of the role
+        Returns:
+            Role: The role with the title, None if not found
+        """
+        return findRoleByTitle(roleTitle, self.roles)

@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar";
 import ErrorPage from "./ErrorPage";
+import "../styles/iam.css";
 
 function IAM() {
     const [permissions, setPermissions] = useState(null);
     const [error, setError] = useState(false);
     const [users, setUsers] = useState([]);
+    const [roles, setRoles] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -55,6 +57,28 @@ function IAM() {
                                 console.error("Error fetching users:", err);
                                 setError(true);
                             });
+
+                        // Fetch roles
+                        fetch("http://localhost:8080/api/iam/getRoles", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ cookie_token: cookieToken }),
+                        })
+                            .then((response) => response.json())
+                            .then((rolesData) => {
+                                if (rolesData.message === "Success") {
+                                    setRoles(rolesData.roles);
+                                } else {
+                                    console.error("Failed to fetch roles:", rolesData.message);
+                                    setError(true);
+                                }
+                            })
+                            .catch((err) => {
+                                console.error("Error fetching roles:", err);
+                                setError(true);
+                            });
                     } else {
                         console.error("IAM permission is missing or false.");
                         setError(true);
@@ -78,33 +102,35 @@ function IAM() {
         window.open(`/viewUser/${userName}`, '_blank', 'width=800,height=600');
     };
 
+    const handleCreateNewRoleClick = () => {
+        navigate("/createNewRole");
+    };
+
+    const handleViewRoleClick = (roleTitle) => {
+        window.open(`/viewRole/${roleTitle}`, '_blank', 'width=800,height=600');
+    };
+
     if (error) {
         return <ErrorPage />;
     }
 
     return (
-        <div>
+        <div className="iam-container">
             {permissions && <Navbar HomePermission={permissions.home} IAMPermission={permissions.iam} />}
-            <h1>Welcome to the IAM Page</h1>
+            <h1 className="iam-title">Identity and Access Management</h1>
             <div className="card-container">
+                {/* Users Section */}
                 <div className="card">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <h2>Users</h2>
+                    <div className="card-header">
+                        <h2 className="card-title">Users</h2>
                         <button
-                            style={{
-                                padding: "8px 16px",
-                                backgroundColor: "#007BFF",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                            }}
+                            className="button button-primary"
                             onClick={handleCreateNewUserClick}
                         >
                             Create New User
                         </button>
                     </div>
-                    <table>
+                    <table className="iam-table">
                         <thead>
                             <tr>
                                 <th>Username</th>
@@ -122,16 +148,49 @@ function IAM() {
                                     <td>
                                         <button 
                                             onClick={() => handleViewUserClick(user.userName)}
-                                            style={{
-                                                padding: "8px 16px",
-                                                backgroundColor: "#28a745",
-                                                color: "#fff",
-                                                border: "none",
-                                                borderRadius: "4px",
-                                                cursor: "pointer",
-                                            }}
+                                            className="button button-success"
                                         >
                                             View User
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Roles Section */}
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Roles</h2>
+                        <button
+                            className="button button-primary"
+                            onClick={handleCreateNewRoleClick}
+                        >
+                            Create New Role
+                        </button>
+                    </div>
+                    <table className="iam-table">
+                        <thead>
+                            <tr>
+                                <th>Role Name</th>
+                                <th>Description</th>
+                                <th>Users Count</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {roles.map((role) => (
+                                <tr key={role.roleTitle}>
+                                    <td>{role.roleTitle}</td>
+                                    <td>{role.roleDescription}</td>
+                                    <td><span className="user-count">{role.users.length}</span></td>
+                                    <td>
+                                        <button 
+                                            onClick={() => handleViewRoleClick(role.roleTitle)}
+                                            className="button button-success"
+                                        >
+                                            View Role
                                         </button>
                                     </td>
                                 </tr>

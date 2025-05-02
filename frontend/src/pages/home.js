@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/navbar";
 import ErrorPage from "./ErrorPage";
+import "../styles/home.css";
 
 function Home() {
     const [permissions, setPermissions] = useState(null);
     const [error, setError] = useState(false);
-    const [tasks, setTasks] = useState(null); // Initialize as null to differentiate between loading and empty state
+    const [tasks, setTasks] = useState(null);
 
     useEffect(() => {
         const cookieData = localStorage.getItem("local_cookie");
@@ -75,36 +76,95 @@ function Home() {
     }
 
     return (
-        <div>
+        <div className="home-container">
             {permissions && <Navbar HomePermission={permissions.home} IAMPermission={permissions.iam} />}
-            <h1>Welcome to the Home Page</h1>
-            <div className="card-container">
-                <div className="card">
-                    <h2>Tasks</h2>
-                    {tasks ? ( // Render table only when tasks are loaded
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Task Name</th>
-                                    <th>Creation Time</th>
-                                    <th>Creator</th>
-                                    <th>Task Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tasks.map((task) => (
-                                    <tr key={task.taskId}>
-                                        <td>{task.title}</td>
-                                        <td>{task.creationTimeStamp}</td>
-                                        <td>{task.creatorUser.userName}</td>
-                                        <td>{task.status}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <p>Loading tasks...</p> // Show a loading message while tasks are being fetched
-                    )}
+            <div className="main-content">
+                <div className="content-card">
+                    <div className="header-section">
+                        <h1 className="header-title">Welcome to NalfFlo</h1>
+                        <p className="header-subtitle">Manage your tasks and workflows efficiently</p>
+                    </div>
+                    <div className="tasks-section">
+                        <div>
+                            <h2 className="tasks-header">Your Tasks</h2>
+                            
+                            <div className="table-controls">
+                                <div className="entries-control">
+                                    <span>Show</span>
+                                    <select className="entries-select">
+                                        <option>10</option>
+                                        <option>25</option>
+                                        <option>50</option>
+                                    </select>
+                                    <span>entries</span>
+                                </div>
+                                <div className="search-control">
+                                    <span>Search:</span>
+                                    <input type="text" className="search-input" placeholder="Search tasks..." />
+                                </div>
+                            </div>
+
+                            {tasks === null ? (
+                                <div className="loading-spinner">
+                                    <div className="spinner"></div>
+                                    <span>Loading tasks...</span>
+                                </div>
+                            ) : (
+                                <div className="tasks-table-container">
+                                    <table className="tasks-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Task Name</th>
+                                                <th>Creation Time</th>
+                                                <th>Creator</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {tasks.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} style={{ textAlign: 'center' }}>
+                                                        No tasks available at the moment.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                tasks.map((task) => (
+                                                    <tr key={task.taskId}>
+                                                        <td>{task.title}</td>
+                                                        <td>{task.creationTimeStamp}</td>
+                                                        <td>{task.creatorUser.userName}</td>
+                                                        <td>
+                                                            <span className={`status-badge ${
+                                                                task.status === 'Completed' 
+                                                                    ? 'status-completed'
+                                                                    : task.status === 'In Progress'
+                                                                    ? 'status-in-progress'
+                                                                    : 'status-pending'
+                                                            }`}>
+                                                                {task.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div className="pagination">
+                                        <div className="pagination-info">
+                                            Showing 1 to {Math.min(tasks.length, 10)} of {tasks.length} entries
+                                        </div>
+                                        <div className="pagination-buttons">
+                                            <button className="pagination-button active">1</button>
+                                            <button className="pagination-button">2</button>
+                                            <button className="pagination-button">3</button>
+                                            <button className="pagination-button">»</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

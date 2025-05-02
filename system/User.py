@@ -90,6 +90,12 @@ class User:
         Args:
             newRole (Role): The new role of the user
         """
+        # If there's an existing role, try to remove this user from its list
+        if self.roleInfo and self in self.roleInfo.getUsers():
+            try:
+                self.roleInfo.removeUser(self)
+            except ValueError:
+                pass  # User wasn't in the old role's list
         self.roleInfo = newRole
     
     def getGroups(self) -> list[Group]:

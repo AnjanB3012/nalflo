@@ -19,7 +19,7 @@ class Role:
         getDetails() -> list[str]: Returns the title and description of the role
         __str__() -> str: Returns the title and description
     """
-    def __init__(self,roleTitle: str, roleDescription: str, permissions: dict={}, users: list[User]=[]):
+    def __init__(self,roleTitle: str, roleDescription: str, permissions: dict={}, users: list[User]=None):
         """
         Initializes the Role object
         Args:
@@ -31,7 +31,7 @@ class Role:
         self.roleTitle = roleTitle
         self.roleDescription = roleDescription
         self.permissions = permissions
-        self.users = users
+        self.users = users if users is not None else []
     
     def getPermissions(self) -> dict:
         """
@@ -84,7 +84,10 @@ class Role:
         Args:
             userDet (User): The user to be removed from the role
         """
-        self.users.remove(userDet)
+        try:
+            self.users.remove(userDet)
+        except ValueError:
+            pass  # User wasn't in the list
 
     def getDetails(self) -> list[str]:
         """

@@ -10,6 +10,8 @@ function ViewUser() {
     const [roles, setRoles] = useState([]);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [newRole, setNewRole] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -105,45 +107,69 @@ function ViewUser() {
     }, [userName, cookieToken, navigate]);
 
     const handleRoleChange = () => {
-        setNewRole(user.roleInfo); // Preselect current role
+        setNewRole(user.roleInfo || ""); // Preselect current role
+        setStatusMessage("");
         setDialogOpen(true);
     };
 
     const handleDialogClose = () => {
         setDialogOpen(false);
         setNewRole("");
+        setStatusMessage("");
     };
 
-    const handleSaveRoleChange = () => {
+    const handleSaveRoleChange = async () => {
         if (!cookieToken) {
-            console.error("No cookie found. Please log in.");
+            setStatusMessage("No session found. Please log in again.");
+            setTimeout(() => navigate("/login"), 2000);
             return;
         }
 
-        fetch("http://localhost:8080/api/iam/changeUserRole", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                target_username: userName,
-                new_role_name: newRole,
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.message === "Success") {
-                    alert("Role updated successfully!");
-                    setUser({ ...user, roleInfo: newRole });
-                    handleDialogClose();
-                } else {
-                    console.error("Failed to update role:", data.message);
-                }
-            })
-            .catch((err) => {
-                console.error("Error updating role:", err);
+        if (!newRole) {
+            setStatusMessage("Please select a role");
+            return;
+        }
+
+        setIsLoading(true);
+        setStatusMessage("Updating role...");
+
+        try {
+            const response = await fetch("http://localhost:8080/api/iam/changeUserRole", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken,
+                    target_username: userName,
+                    new_role_name: newRole,
+                }),
             });
+
+            const data = await response.json();
+
+            if (data.message === "Success") {
+                setUser({ ...user, roleInfo: newRole });
+                setStatusMessage("Role updated successfully!");
+                setTimeout(() => {
+                    handleDialogClose();
+                    setStatusMessage("");
+                }, 1500);
+            } else if (data.message === "Permission Denied") {
+                setStatusMessage("You don't have permission to change roles");
+            } else if (data.message === "Failed") {
+                setStatusMessage("Session expired. Please log in again");
+                localStorage.removeItem("local_cookie");
+                setTimeout(() => navigate("/login"), 2000);
+            } else {
+                setStatusMessage("An error occurred while updating the role");
+            }
+        } catch (error) {
+            console.error("Error updating role:", error);
+            setStatusMessage("Failed to connect to the server");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleGroupAdd = () => {
@@ -211,66 +237,45 @@ function ViewUser() {
             </div>
 
             {dialogOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: "0",
-                        left: "0",
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        zIndex: 1000,
-                    }}
-                >
-                    <div
-                        style={{
-                            backgroundColor: "#fff",
-                            padding: "20px",
-                            borderRadius: "8px",
-                            width: "400px",
-                        }}
-                    >
-                        <h2>Change Role for {user.name}</h2>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-96">
+                        <h2 className="text-xl font-semibold mb-4">Change Role for {user.name}</h2>
+                        {statusMessage && (
+                            <div className={`p-3 mb-4 rounded ${
+                                statusMessage.includes("success") 
+                                    ? "bg-green-100 text-green-700" 
+                                    : "bg-red-100 text-red-700"
+                            }`}>
+                                {statusMessage}
+                            </div>
+                        )}
                         <select
                             value={newRole}
                             onChange={(e) => setNewRole(e.target.value)}
-                            style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+                            className="w-full p-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={isLoading}
                         >
+                            <option value="">Select a role</option>
                             {roles.map((role) => (
                                 <option key={role} value={role}>
                                     {role}
                                 </option>
                             ))}
                         </select>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <button
-                                onClick={handleSaveRoleChange}
-                                style={{
-                                    padding: "8px 16px",
-                                    backgroundColor: "#007BFF",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Save
-                            </button>
+                        <div className="flex justify-end space-x-2">
                             <button
                                 onClick={handleDialogClose}
-                                style={{
-                                    padding: "8px 16px",
-                                    backgroundColor: "#FF0000",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                }}
+                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                disabled={isLoading}
                             >
                                 Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveRoleChange}
+                                disabled={!newRole || isLoading}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? "Saving..." : "Save Changes"}
                             </button>
                         </div>
                     </div>

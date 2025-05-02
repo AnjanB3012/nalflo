@@ -1,59 +1,26 @@
+import "../styles/navbar.css";
+
 function Navbar({ HomePermission, IAMPermission }) {
     const handleLogout = () => {
         localStorage.removeItem("local_cookie");
         window.location.href = "/";
     };
+    
     return (
-        <nav
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: '#032cfc',
-                padding: '15px 30px',
-                color: 'white',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            }}
-        >
-            <h1 style={{ margin: 0, fontSize: '24px' }}>NalfFlo</h1>
-            <div style={{ display: 'flex', gap: '20px' }}>
+        <nav className="navbar">
+            <h1 className="navbar-brand">NalfFlo</h1>
+            <div className="navbar-links">
                 {HomePermission && (
-                    <a
-                        href="/home"
-                        style={{
-                            color: 'white',
-                            textDecoration: 'none',
-                            fontSize: '16px',
-                            fontWeight: '500',
-                        }}
-                    >
+                    <a href="/home" className="navbar-link">
                         Home
                     </a>
                 )}
                 {IAMPermission && (
-                    <a
-                        href="/iam"
-                        style={{
-                            color: 'white',
-                            textDecoration: 'none',
-                            fontSize: '16px',
-                            fontWeight: '500',
-                        }}
-                    >
+                    <a href="/iam" className="navbar-link">
                         IAM
                     </a>
                 )}
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'white',
-                        fontSize: '16px',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                    }}
-                >
+                <button onClick={handleLogout} className="logout-button">
                     Logout
                 </button>
             </div>
