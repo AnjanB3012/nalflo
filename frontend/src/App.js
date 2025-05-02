@@ -5,6 +5,7 @@ import SetupInstance from './pages/setupInstance';
 import Login from './pages/login';
 import Home from './pages/home';
 import IAM from './pages/iam';
+import CreateNewUser from './pages/createNewUser';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/iam" element={<IAM />} />
+        <Route path="/createNewUser" element={<CreateNewUser />} />
       </Routes>
     </Router>
   );

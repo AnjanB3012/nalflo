@@ -134,5 +134,30 @@ def changeUserRole():
             return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
+    
+@app.route('/api/iam/createNewUser', methods=['POST'])
+def createNewUser():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            new_username = data.get('new_username')
+            new_password = data.get('new_password')
+            new_role_name = data.get('new_role_name')
+            nameOfUser = data.get('nameOfUser')
+            tempSystem.createUser(username=new_username, password=new_password, roleName=new_role_name, name=nameOfUser)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/getDomain', methods=['GET'])
+def getDomain():
+    domain = tempSystem.getDomain()
+    return jsonify({"domain": domain})
+
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

@@ -309,7 +309,7 @@ class System:
         Method to create a user
         Args:
             username (str): The username of the user
-            password (str): The password of the user
+            password (str): The password of the domain
             roleName (str): The name of the role of the user
             groupNames (list[str]): The names of the groups the user is in
         """
@@ -462,3 +462,11 @@ class System:
                 print("Role not found")
         else:    
             print("User not found")
+
+    def getDomain(self) -> str:
+        """
+        Method to get the domain of the system
+        Returns:
+            str: The domain of the system
+        """
+        return self.domain
