@@ -161,3 +161,14 @@ class User:
             "groups": [group.getDetails()[0] for group in self.groups],
             "name": self.name
         }
+    
+    def removeFromGroup(self, group: Group):
+        """
+        Method to remove the user from a group
+        Args:
+            group (Group): The group to remove the user from
+        """
+        try:
+            self.groups.remove(group)
+        except ValueError:
+            print(f"User {self.userName} is not in group {group.getDetails()[0]}")

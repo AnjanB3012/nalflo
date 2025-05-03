@@ -9,6 +9,7 @@ function IAM() {
     const [error, setError] = useState(false);
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
+    const [groups, setGroups] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -79,6 +80,29 @@ function IAM() {
                                 console.error("Error fetching roles:", err);
                                 setError(true);
                             });
+
+                        // Fetch groups
+                        fetch("http://localhost:8080/api/iam/getAllGroups", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ cookie_token: cookieToken }),
+                        })
+                            .then((response) => response.json())
+                            .then((groupsData) => {
+                                if (groupsData.message === "Success") {
+                                    setGroups(groupsData.groups);
+                                } else {
+                                    console.error("Failed to fetch groups:", groupsData.message);
+                                    setError(true);
+                                }
+                            })
+                            .catch((err) => {
+                                console.error("Error fetching groups:", err);
+                                setError(true);
+                            });
+                        
                     } else {
                         console.error("IAM permission is missing or false.");
                         setError(true);
@@ -108,6 +132,14 @@ function IAM() {
 
     const handleViewRoleClick = (roleTitle) => {
         window.open(`/viewRole/${roleTitle}`, '_blank', 'width=800,height=600');
+    };
+
+    const handleViewGroupClick = (groupTitle) => {
+        window.open(`/viewGroup/${groupTitle}`, '_blank', 'width=800,height=600');
+    };
+
+    const handleCreateNewGroupClick = () => {
+        navigate("/createNewGroup");
     };
 
     if (error) {
@@ -198,8 +230,48 @@ function IAM() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Groups Section */}
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Groups</h2>
+                        <button
+                            className="button button-primary"
+                            onClick={handleCreateNewGroupClick}
+                        >
+                            Create New Group
+                        </button>
+                    </div>
+                    <table className="iam-table">
+                        <thead>
+                            <tr>
+                                <th>Group Name</th>
+                                <th>Description</th>
+                                <th>Users Count</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {groups.map((group) => (
+                                <tr key={group.title}>
+                                    <td>{group.title}</td>
+                                    <td>{group.description}</td>
+                                    <td><span className="user-count">{group.users.length}</span></td>
+                                    <td>
+                                        <button 
+                                            onClick={() => handleViewGroupClick(group.title)}
+                                            className="button button-success"
+                                        >
+                                            View Group
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
             </div>
-        </div>
     );
 }
 

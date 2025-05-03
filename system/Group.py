@@ -71,3 +71,15 @@ class Group:
         {self.description}
         </Group_Description>
         """
+    
+    def toDict(self):
+        """
+        Converts the group to a dictionary
+        Returns:
+            dict: The group as a dictionary
+        """
+        return {
+            "title": self.title,
+            "description": self.description,
+            "users": [user.getUserName() for user in self.users]
+        }

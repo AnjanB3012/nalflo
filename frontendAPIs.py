@@ -272,6 +272,140 @@ def addUserToRole():
             return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
+    
+@app.route('/api/iam/getAllGroups', methods=['POST'])
+def getAllGroups():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            groups = tempSystem.getSysGroups()
+            response = {
+                "message": "Success",
+                "groups": [group.toDict() for group in groups]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/api/iam/viewGroup', methods=['POST'])
+def viewGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            group_title = data.get('group_title')
+            group = tempSystem.findGroupByTitle(group_title)
+            if group is None:
+                return jsonify({"message": "Group not found"})
+            response = {
+                "message": "Success",
+                "group": group.toDict()
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/iam/addUserToGroup', methods=['POST'])
+def addUserToGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            group_title = data.get('group_title')
+            user_name = data.get('user_name')
+            tempSystem.addUserToGroups(username=user_name, groupNames=[group_title])
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/iam/removeUserFromGroup', methods=['POST'])
+def removeUserFromGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            group_title = data.get('group_title')
+            user_name = data.get('user_name')
+            tempSystem.removeUserFromGroup(username=user_name, groupName=group_title)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/iam/createGroup', methods=['POST'])
+def createGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            group_title = data.get('group_title')
+            group_description = data.get('group_description')
+            try:
+                tempSystem.createGroup(groupTitle=group_title, groupDescription=group_description)
+                return jsonify({"message": "Success"})
+            except ValueError as e:
+                return jsonify({"message": str(e)})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/iam/deleteGroup', methods=['POST'])
+def deleteGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            group_title = data.get('group_title')
+            try:
+                tempSystem.deleteGroup(group_title)
+                return jsonify({"message": "Success"})
+            except ValueError as e:
+                return jsonify({"message": str(e)})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/iam/changeUserPassword', methods=['POST'])
+def changeUserPassword():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['iam']:
+            target_username = data.get('target_username')
+            new_password = data.get('new_password')
+            target_user = tempSystem.getUser(username=target_username)
+            if target_user is None:
+                return jsonify({"message": "User not found"})
+            target_user.setPassword(new_password)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

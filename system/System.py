@@ -410,8 +410,12 @@ class System:
             for tempGroup in groupNames:
                 tempGroup1 = findGroupByName(tempGroup,self.groups)
                 if tempGroup1:
-                    tempUser.addToGroup(tempGroup1)
-                    tempGroup1.addUser(tempUser)
+                    # Check if user is already in the group
+                    if tempUser not in tempGroup1.getUsers():
+                        tempUser.addToGroup(tempGroup1)
+                        tempGroup1.addUser(tempUser)
+                    else:
+                        print(f"User {username} is already in group {tempGroup}")
     
     def getSysRoles(self) -> list[Role]:
         """
@@ -497,3 +501,74 @@ class System:
             Role: The role with the title, None if not found
         """
         return findRoleByTitle(roleTitle, self.roles)
+
+    def removeUserFromGroup(self, username: str, groupName: str):
+        """
+        Method to remove a user from a group
+        Args:
+            username (str): The username of the user
+            groupName (str): The name of the group
+        """
+        tempUser = findUserByUserName(username, self.users)
+        if tempUser:
+            tempGroup = findGroupByName(groupName, self.groups)
+            if tempGroup:
+                tempUser.removeFromGroup(tempGroup)
+                tempGroup.removeUser(tempUser)
+
+    def findGroupByTitle(self, groupTitle: str) -> Group:
+        """
+        Finds a group by its title
+        Args:
+            groupTitle (str): The title of the group to find
+        Returns:
+            Group: The group with the given title, None if not found
+        """
+        return findGroupByName(groupTitle, self.groups)
+
+    def createGroup(self, groupTitle: str, groupDescription: str):
+        """
+        Creates a new group in the system
+        Args:
+            groupTitle (str): The title of the group
+            groupDescription (str): The description of the group
+        Raises:
+            ValueError: If the group title is empty, too long, or already exists
+            ValueError: If the group description is empty or too long
+        """
+        if not groupTitle or not groupTitle.strip():
+            raise ValueError("Group title cannot be empty")
+        
+        if len(groupTitle.strip()) > 50:
+            raise ValueError("Group title cannot exceed 50 characters")
+            
+        if not groupDescription or not groupDescription.strip():
+            raise ValueError("Group description cannot be empty")
+            
+        if len(groupDescription.strip()) > 500:
+            raise ValueError("Group description cannot exceed 500 characters")
+            
+        if findGroupByName(groupTitle.strip(), self.groups) is not None:
+            raise ValueError("Group with this title already exists")
+        
+        newGroup = Group.Group(groupTitle.strip(), groupDescription.strip())
+        self.groups.append(newGroup)
+
+    def deleteGroup(self, groupTitle: str):
+        """
+        Method to delete a group
+        Args:
+            groupTitle (str): The title of the group to delete
+        """
+        group = self.findGroupByTitle(groupTitle)
+        if group is None:
+            raise ValueError("Group not found")
+        
+        # Remove group from all users
+        for user in self.users:
+            userGroups = user.getGroups()
+            if group in userGroups:
+                userGroups.remove(group)
+        
+        # Remove group from system
+        self.groups.remove(group)

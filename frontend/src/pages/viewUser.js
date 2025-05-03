@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
+import { Select, MenuItem } from "@mui/material";
+import { TextField } from "@mui/material";
 
 function ViewUser() {
     const { userName } = useParams();
@@ -12,6 +15,11 @@ function ViewUser() {
     const [newRole, setNewRole] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState("");
+    const [groups, setGroups] = useState([]);
+    const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState("");
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -45,6 +53,26 @@ function ViewUser() {
                 })
                 .catch((err) => {
                     console.error("Error fetching roles:", err);
+                });
+
+            // Fetch groups
+            fetch("http://localhost:8080/api/iam/getAllGroups", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ cookie_token: parsedCookie.token }),
+            })
+                .then((response) => response.json())
+                .then((groupData) => {
+                    if (groupData.message === "Success") {
+                        setGroups(groupData.groups);
+                    } else {
+                        console.error("Failed to fetch groups:", groupData.message);
+                    }
+                })
+                .catch((err) => {
+                    console.error("Error fetching groups:", err);
                 });
         } catch (e) {
             setError(true);
@@ -173,13 +201,210 @@ function ViewUser() {
     };
 
     const handleGroupAdd = () => {
-        // Placeholder function for adding to group
-        console.log("Add to group requested for user:", user.userName);
+        setSelectedGroup("");
+        setStatusMessage("");
+        setGroupDialogOpen(true);
     };
 
-    const handleGroupRemove = (groupName) => {
-        // Placeholder function for removing from group
-        console.log("Remove from group requested for user:", user.userName, "group:", groupName);
+    const handleGroupDialogClose = () => {
+        setGroupDialogOpen(false);
+        setSelectedGroup("");
+        setStatusMessage("");
+    };
+
+    const handleSaveGroupAdd = async () => {
+        if (!cookieToken) {
+            setStatusMessage("No session found. Please log in again.");
+            setTimeout(() => navigate("/login"), 2000);
+            return;
+        }
+
+        if (!selectedGroup) {
+            setStatusMessage("Please select a group");
+            return;
+        }
+
+        setIsLoading(true);
+        setStatusMessage("Adding user to group...");
+
+        try {
+            const response = await fetch("http://localhost:8080/api/iam/addUserToGroup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken,
+                    group_title: selectedGroup,
+                    user_name: userName,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.message === "Success") {
+                // Refresh user data
+                const userResponse = await fetch("http://localhost:8080/api/iam/viewUser", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        target_username: userName,
+                    }),
+                });
+                const userData = await userResponse.json();
+                if (userData.message === "Success") {
+                    setUser(userData.user);
+                }
+                setStatusMessage("User added to group successfully!");
+                setTimeout(() => {
+                    handleGroupDialogClose();
+                    setStatusMessage("");
+                }, 1500);
+            } else if (data.message === "Permission Denied") {
+                setStatusMessage("You don't have permission to add users to groups");
+            } else if (data.message === "Failed") {
+                setStatusMessage("Session expired. Please log in again");
+                localStorage.removeItem("local_cookie");
+                setTimeout(() => navigate("/login"), 2000);
+            } else {
+                setStatusMessage("An error occurred while adding the user to the group");
+            }
+        } catch (error) {
+            console.error("Error adding user to group:", error);
+            setStatusMessage("Failed to connect to the server");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGroupRemove = async (groupName) => {
+        if (!cookieToken) {
+            setStatusMessage("No session found. Please log in again.");
+            setTimeout(() => navigate("/login"), 2000);
+            return;
+        }
+
+        setIsLoading(true);
+        setStatusMessage("Removing user from group...");
+
+        try {
+            const response = await fetch("http://localhost:8080/api/iam/removeUserFromGroup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken,
+                    group_title: groupName,
+                    user_name: userName,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.message === "Success") {
+                // Refresh user data
+                const userResponse = await fetch("http://localhost:8080/api/iam/viewUser", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        target_username: userName,
+                    }),
+                });
+                const userData = await userResponse.json();
+                if (userData.message === "Success") {
+                    setUser(userData.user);
+                }
+                setStatusMessage("User removed from group successfully!");
+                setTimeout(() => setStatusMessage(""), 1500);
+            } else if (data.message === "Permission Denied") {
+                setStatusMessage("You don't have permission to remove users from groups");
+            } else if (data.message === "Failed") {
+                setStatusMessage("Session expired. Please log in again");
+                localStorage.removeItem("local_cookie");
+                setTimeout(() => navigate("/login"), 2000);
+            } else {
+                setStatusMessage("An error occurred while removing the user from the group");
+            }
+        } catch (error) {
+            console.error("Error removing user from group:", error);
+            setStatusMessage("Failed to connect to the server");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handlePasswordChange = () => {
+        setNewPassword("");
+        setStatusMessage("");
+        setPasswordDialogOpen(true);
+    };
+
+    const handlePasswordDialogClose = () => {
+        setPasswordDialogOpen(false);
+        setNewPassword("");
+        setStatusMessage("");
+    };
+
+    const handleSavePasswordChange = async () => {
+        if (!cookieToken) {
+            setStatusMessage("No session found. Please log in again.");
+            setTimeout(() => navigate("/login"), 2000);
+            return;
+        }
+
+        if (!newPassword) {
+            setStatusMessage("Please enter a new password");
+            return;
+        }
+
+        setIsLoading(true);
+        setStatusMessage("Updating password...");
+
+        try {
+            const response = await fetch("http://localhost:8080/api/iam/changeUserPassword", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken,
+                    target_username: userName,
+                    new_password: newPassword,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.message === "Success") {
+                setStatusMessage("Password updated successfully!");
+                setTimeout(() => {
+                    handlePasswordDialogClose();
+                    setStatusMessage("");
+                }, 1500);
+            } else if (data.message === "Permission Denied") {
+                setStatusMessage("You don't have permission to change user passwords");
+            } else if (data.message === "Failed") {
+                setStatusMessage("Session expired. Please log in again");
+                localStorage.removeItem("local_cookie");
+                setTimeout(() => navigate("/login"), 2000);
+            } else if (data.message === "User not found") {
+                setStatusMessage("User not found");
+            } else {
+                setStatusMessage("An error occurred while updating the password");
+            }
+        } catch (error) {
+            console.error("Error updating password:", error);
+            setStatusMessage("Failed to connect to the server");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (error) {
@@ -193,91 +418,153 @@ function ViewUser() {
 
     return (
         <div className="p-6 max-w-2xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-4xl font-bold mb-2">{user.name || "No Name"}</h1>
-                <p className="text-gray-600 text-lg">{user.userName}</p>
-            </div>
-
-            <div className="mb-8">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Role: {user.roleInfo}</h2>
-                    <button 
-                        onClick={handleRoleChange}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                    >
-                        Change Role
-                    </button>
-                </div>
-            </div>
-
-            <div>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">Groups</h2>
-                    <button 
-                        onClick={handleGroupAdd}
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
-                    >
-                        Add to Group
-                    </button>
-                </div>
-                
-                <div className="space-y-2">
-                    {user.groups && user.groups.map((group, index) => (
-                        <div key={index} className="flex items-center justify-between bg-gray-100 p-3 rounded">
-                            <span>{group}</span>
-                            <button 
-                                onClick={() => handleGroupRemove(group)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                            >
-                                Remove
-                            </button>
+            <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+                <h1 className="text-2xl font-bold mb-4">User Details</h1>
+                {user && (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Username:</label>
+                            <p className="text-gray-900">{user.userName}</p>
                         </div>
-                    ))}
-                </div>
-            </div>
-
-            {dialogOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-96">
-                        <h2 className="text-xl font-semibold mb-4">Change Role for {user.name}</h2>
-                        {statusMessage && (
-                            <div className={`p-3 mb-4 rounded ${
-                                statusMessage.includes("success") 
-                                    ? "bg-green-100 text-green-700" 
-                                    : "bg-red-100 text-red-700"
-                            }`}>
-                                {statusMessage}
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Name:</label>
+                            <p className="text-gray-900">{user.name}</p>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Role:</label>
+                            <div className="flex items-center space-x-2">
+                                <p className="text-gray-900">{user.roleInfo}</p>
+                                <button
+                                    onClick={handleRoleChange}
+                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                >
+                                    Change Role
+                                </button>
                             </div>
-                        )}
-                        <select
-                            value={newRole}
-                            onChange={(e) => setNewRole(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            disabled={isLoading}
-                        >
-                            <option value="">Select a role</option>
-                            {roles.map((role) => (
-                                <option key={role} value={role}>
-                                    {role}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="flex justify-end space-x-2">
-                            <button
-                                onClick={handleDialogClose}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSaveRoleChange}
-                                disabled={!newRole || isLoading}
-                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? "Saving..." : "Save Changes"}
-                            </button>
                         </div>
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Password:</label>
+                            <div className="flex items-center space-x-2">
+                                <p className="text-gray-900">••••••••</p>
+                                <button
+                                    onClick={handlePasswordChange}
+                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                >
+                                    Change Password
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Groups:</label>
+                            <div className="space-y-2">
+                                {user.groups && user.groups.map((group, index) => (
+                                    <div key={index} className="flex items-center justify-between">
+                                        <p className="text-gray-900">{group}</p>
+                                        <button
+                                            onClick={() => handleGroupRemove(group)}
+                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={handleGroupAdd}
+                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                >
+                                    Add to Group
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Role Change Dialog */}
+            <Dialog open={dialogOpen} onClose={handleDialogClose}>
+                <DialogTitle>Change User Role</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Select a new role for the user:
+                    </DialogContentText>
+                    <Select
+                        value={newRole}
+                        onChange={(e) => setNewRole(e.target.value)}
+                        fullWidth
+                    >
+                        {roles.map((role) => (
+                            <MenuItem key={role} value={role}>
+                                {role}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDialogClose}>Cancel</Button>
+                    <Button onClick={handleSaveRoleChange} disabled={isLoading}>
+                        {isLoading ? "Saving..." : "Save"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Password Change Dialog */}
+            <Dialog open={passwordDialogOpen} onClose={handlePasswordDialogClose}>
+                <DialogTitle>Change User Password</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Enter a new password for the user:
+                    </DialogContentText>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="New Password"
+                        type="password"
+                        fullWidth
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handlePasswordDialogClose}>Cancel</Button>
+                    <Button onClick={handleSavePasswordChange} disabled={isLoading}>
+                        {isLoading ? "Saving..." : "Save"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Group Add Dialog */}
+            <Dialog open={groupDialogOpen} onClose={handleGroupDialogClose}>
+                <DialogTitle>Add User to Group</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Select a group to add the user to:
+                    </DialogContentText>
+                    <Select
+                        value={selectedGroup}
+                        onChange={(e) => setSelectedGroup(e.target.value)}
+                        fullWidth
+                    >
+                        {groups.map((group) => (
+                            <MenuItem key={group.title} value={group.title}>
+                                {group.title}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleGroupDialogClose}>Cancel</Button>
+                    <Button onClick={handleSaveGroupAdd} disabled={isLoading}>
+                        {isLoading ? "Saving..." : "Save"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {statusMessage && (
+                <div className="mt-4">
+                    <div className={`p-4 rounded ${
+                        statusMessage.includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    }`}>
+                        {statusMessage}
                     </div>
                 </div>
             )}

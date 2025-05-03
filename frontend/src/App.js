@@ -9,6 +9,8 @@ import CreateNewUser from './pages/createNewUser';
 import ViewUser from './pages/viewUser';
 import CreateNewRole from './pages/createNewRole';
 import ViewRole from './pages/viewRole';
+import ViewGroup from './pages/viewGroup';
+import CreateGroup from './pages/createGroup';
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
         <Route path="/viewUser/:userName" element={<ViewUser />} />
         <Route path="/createNewRole" element={<CreateNewRole />} />
         <Route path="/viewRole/:roleTitle" element={<ViewRole />} />
+        <Route path="/viewGroup/:groupTitle" element={<ViewGroup />} />
+        <Route path="/createNewGroup" element={<CreateGroup />} />
       </Routes>
     </Router>
   );
