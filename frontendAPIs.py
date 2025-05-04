@@ -89,12 +89,15 @@ def getUserTasks():
     if cookie_token in cookies:
         username = cookies[cookie_token][0]
         user = tempSystem.getUser(username=username)
-        tasks = user.getTasks()
-        response = {
-            "message": "Success",
-            "tasks": [task.toDict() for task in tasks]
-        }
-        return jsonify(response)
+        if user.getRole().getPermissions()['home']:
+            tasks = user.getTasks()
+            response = {
+                "message": "Success",
+                "tasks": [task.toDict() for task in tasks]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
 
@@ -402,6 +405,128 @@ def changeUserPassword():
                 return jsonify({"message": "User not found"})
             target_user.setPassword(new_password)
             return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+    
+
+@app.route('/api/home/getAssignableUsersToTask', methods=['POST'])
+def getAssignableUsersToTask():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['home']:
+            if user.getRole().getPermissions()['AssignToAll']:
+                users = tempSystem.getSysUsers()
+                response = {
+                    "message": "Success",
+                    "users": [user.toDict() for user in users]
+                }
+                return jsonify(response)
+            else:
+                userGroups = user.getGroups()
+                assignableUsers = {}
+                for group in userGroups:
+                    users1 = group.getUsers()
+                    for user1 in users1:
+                        if user1==user:
+                            continue
+                        else:
+                            assignableUsers[user1.getName()] = user1.getUserName()
+                response = {
+                    "message": "Success",
+                    "users": assignableUsers
+                }
+                return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/api/home/createNewTask', methods=['POST'])
+def createNewTask():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['home']:
+            task_title = data.get('task_title')
+            task_description = data.get('task_description')
+            task_assignees = data.get('task_assignees')
+            if username in task_assignees:
+                task_assignees.remove(username)
+            tempSystem.createTask(task_title, task_description, task_assignees, user)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/home/deleteTask', methods=['POST'])
+def deleteTask():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['home']:
+            task_id = data.get('task_id')
+            task = tempSystem.findTaskByID(task_id)
+            if task and task.getCreatorUser().getUserName() == username:
+                tempSystem.tasks.remove(task)
+                return jsonify({"message": "Success"})
+            else:
+                return jsonify({"message": "Permission Denied"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/home/closeTask', methods=['POST'])
+def closeTask():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['home']:
+            task_id = data.get('task_id')
+            task = tempSystem.findTaskByID(task_id)
+            if task and (task.getCreatorUser().getUserName() == username or username in [u.getUserName() for u in task.getAssignedUsers()]):
+                tempSystem.closeTask(task_id)
+                return jsonify({"message": "Success"})
+            else:
+                return jsonify({"message": "Permission Denied"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/home/assignUsersToTask', methods=['POST'])
+def assignUsersToTask():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['home']:
+            task_id = data.get('task_id')
+            new_assignees = data.get('new_assignees')
+            if username in new_assignees:
+                new_assignees.remove(username)
+            task = findTaskByID(task_id, tempSystem.tasks)
+            if task and task.getCreatorUser().getUserName() == username:
+                for assignee in new_assignees:
+                    assignee_user = tempSystem.getUser(assignee)
+                    if assignee_user:
+                        task.assignUser(assignee_user)
+                return jsonify({"message": "Success"})
+            else:
+                return jsonify({"message": "Permission Denied"})
         else:
             return jsonify({"message": "Permission Denied"})
     else:

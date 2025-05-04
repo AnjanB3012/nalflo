@@ -116,19 +116,28 @@ class User:
 
     def getTasks(self) -> list[Task]:
         """
-        Getter for the tasks of the user
+        Gets all tasks assigned to the user
         Returns:
-            list[Task]: The tasks of the user
+            list[Task]: List of tasks assigned to the user
         """
         return self.tasks
 
-    def addTask(self, newTask: Task):
+    def addTask(self, task):
         """
-        Method to add a task to the user
+        Adds a task to the user's task list
         Args:
-            newTask (Task): The task to add to the user
+            task (Task): The task to add
         """
-        self.tasks.append(newTask)
+        self.tasks.append(task)
+
+    def removeTask(self, task):
+        """
+        Removes a task from the user's task list
+        Args:
+            task (Task): The task to remove
+        """
+        if task in self.tasks:
+            self.tasks.remove(task)
     
     def __str__(self):
         """

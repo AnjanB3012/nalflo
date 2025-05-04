@@ -11,6 +11,8 @@ import CreateNewRole from './pages/createNewRole';
 import ViewRole from './pages/viewRole';
 import ViewGroup from './pages/viewGroup';
 import CreateGroup from './pages/createGroup';
+import CreateNewTask from './pages/createNewTask';
+import TaskView from './pages/TaskView';
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
         <Route path="/viewRole/:roleTitle" element={<ViewRole />} />
         <Route path="/viewGroup/:groupTitle" element={<ViewGroup />} />
         <Route path="/createNewGroup" element={<CreateGroup />} />
+        <Route path="/createNewTask" element={<CreateNewTask />} />
+        <Route path="/task/:taskId" element={<TaskView />} />
       </Routes>
     </Router>
   );

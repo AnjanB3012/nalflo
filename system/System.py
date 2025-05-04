@@ -128,10 +128,11 @@ class System:
         self.roles = []
         self.users = []
         self.tasks = []
-        self.permissions = ["home","iam"]
+        self.permissions = ["home","iam","AssignToAll"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
-            "iam": True
+            "iam": True,
+            "AssignToAll": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
         tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
@@ -351,16 +352,15 @@ class System:
         if tempUser:
             tempUser.addTask(taskTitle,taskDescription)
     
-    def closeTask(self, taskID : int):
+    def closeTask(self, taskID: int):
         """
-        Method to close a task
+        Closes a task
         Args:
-            username (str): The username of the user
-            taskTitle (str): The title of the task
+            taskID (int): The ID of the task to close
         """
-        closingTask = findTaskByID(taskID,self.tasks)
-        if closingTask:
-            closingTask.updateStatus(False)
+        task = findTaskByID(taskID, self.tasks)
+        if task:
+            task.updateStatus(False)
     
     def resetUserPassword(self, username:str, newPassword:str):
         """
@@ -572,3 +572,45 @@ class System:
         
         # Remove group from system
         self.groups.remove(group)
+
+    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task]=[]):
+        """
+        Creates a new task
+        Args:
+            taskTitle (str): The title of the task
+            taskDescription (str): The description of the task
+            taskAssignees (list[str]): List of usernames to assign the task to
+            creatorUser (User): The user creating the task
+            previousTask (list[Task], optional): List of previous tasks. Defaults to [].
+        """
+        taskId = findUniqueTaskID(self.tasks)
+        assignedUsers = []
+        for username in taskAssignees:
+            user = findUserByUserName(username, self.users)
+            if user:
+                assignedUsers.append(user)
+        newTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        self.tasks.append(newTask)
+        for user in assignedUsers:
+            user.addTask(newTask)
+        creatorUser.addTask(newTask)
+
+    def getTask(self, taskID: int) -> Task:
+        """
+        Gets a task by ID
+        Args:
+            taskID (int): The ID of the task
+        Returns:
+            Task: The task with the ID, None if not found
+        """
+        return findTaskByID(taskID, self.tasks)
+
+    def findTaskByID(self, taskID: int) -> Task:
+        """
+        Finds a task by its ID
+        Args:
+            taskID (int): The ID of the task
+        Returns:
+            Task: The task with the ID, None if not found
+        """
+        return findTaskByID(taskID, self.tasks)
