@@ -10,7 +10,8 @@ function CreateNewRole() {
     const [roleDescription, setRoleDescription] = useState("");
     const [rolePermissions, setRolePermissions] = useState({
         home: false,
-        iam: false
+        iam: false,
+        AssignToAll: false
     });
     const navigate = useNavigate();
 

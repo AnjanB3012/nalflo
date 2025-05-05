@@ -522,7 +522,7 @@ def assignUsersToTask():
             new_assignees = data.get('new_assignees')
             if username in new_assignees:
                 new_assignees.remove(username)
-            task = findTaskByID(task_id, tempSystem.tasks)
+            task = tempSystem.findTaskByID(int(task_id))
             if task and task.getCreatorUser().getUserName() == username:
                 for assignee in new_assignees:
                     assignee_user = tempSystem.getUser(assignee)
