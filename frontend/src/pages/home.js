@@ -11,6 +11,28 @@ function Home() {
     const [showCompleted, setShowCompleted] = useState(true);
     const [currentUser, setCurrentUser] = useState('');
     const [permissions, setPermissions] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const fetchTasks = async (cookieToken) => {
+        try {
+            const response = await fetch("http://localhost:8080/api/home/getUserTasks", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ cookie_token: cookieToken }),
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setTasks(data.tasks);
+            } else {
+                setError(data.message);
+            }
+        } catch (error) {
+            console.error("Error fetching tasks:", error);
+            setError("Failed to fetch tasks");
+        }
+    };
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -48,22 +70,8 @@ function Home() {
             }
 
             // Fetch tasks
-            try {
-                const response = await fetch("http://localhost:8080/api/home/getUserTasks", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ cookie_token: cookieToken }),
-                });
-                const data = await response.json();
-                if (data.message === "Success") {
-                    setTasks(data.tasks);
-                }
-            } catch (error) {
-                console.error("Error fetching tasks:", error);
-                setError("Failed to fetch tasks");
-            }
+            await fetchTasks(cookieToken);
+            setLoading(false);
         };
 
         fetchUserData();
@@ -99,7 +107,10 @@ function Home() {
 
     const handleCloseTask = async (taskId) => {
         const cookieData = localStorage.getItem("local_cookie");
-        if (!cookieData) return;
+        if (!cookieData) {
+            setError("Session expired. Please login again.");
+            return;
+        }
 
         const parsedCookie = JSON.parse(cookieData);
         const cookieToken = parsedCookie.token;
@@ -117,20 +128,21 @@ function Home() {
             });
             const data = await response.json();
             if (data.message === "Success") {
-                setTasks(tasks.map(task => 
-                    task.taskId === taskId ? { ...task, status: false } : task
-                ));
+                // Refresh tasks after successful close
+                await fetchTasks(cookieToken);
+            } else {
+                setError(data.message);
             }
         } catch (error) {
             console.error("Error closing task:", error);
-            setError("Failed to close task");
+            setError("Failed to close task. Please try again.");
         }
     };
 
     const filteredTasks = tasks?.filter(task => {
         const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             task.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = showCompleted || task.status;
+        const matchesStatus = showCompleted ? true : task.status;
         return matchesSearch && matchesStatus;
     });
 
@@ -171,7 +183,8 @@ function Home() {
                 </div>
 
                 {error && <div className="error-message">{error}</div>}
-                {tasks === null ? (
+                
+                {loading ? (
                     <div className="loading-spinner">
                         <div className="spinner"></div>
                         <span>Loading tasks...</span>

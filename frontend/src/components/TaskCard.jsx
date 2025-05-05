@@ -5,12 +5,14 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
     const [showAssignUsers, setShowAssignUsers] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [assignableUsers, setAssignableUsers] = useState([]);
+    const [error, setError] = useState('');
+
+    const getStatusDisplay = (status) => {
+        return status ? 'Open' : 'Closed';
+    };
 
     const getStatusClass = (status) => {
-        if (typeof status !== 'string') {
-            return 'pending';
-        }
-        return status.toLowerCase();
+        return status ? 'open' : 'closed';
     };
 
     const handleAssignUsers = async () => {
@@ -34,8 +36,11 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
                 const filteredUsers = data.users.filter(user => user.userName !== currentUser);
                 setAssignableUsers(filteredUsers);
                 setShowAssignUsers(true);
+            } else {
+                setError(data.message);
             }
         } catch (error) {
+            setError("Error fetching assignable users");
             console.error("Error fetching assignable users:", error);
         }
     };
@@ -64,18 +69,22 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
                 setShowAssignUsers(false);
                 setSelectedUsers([]);
                 onAssignUsers();
+            } else {
+                setError(data.message);
             }
         } catch (error) {
+            setError("Error assigning users");
             console.error("Error assigning users:", error);
         }
     };
 
     return (
         <div className="task-card">
+            {error && <div className="error-message">{error}</div>}
             <div className="task-header">
                 <h3>{task.title}</h3>
                 <span className={`status-badge ${getStatusClass(task.status)}`}>
-                    {task.status || 'Pending'}
+                    {getStatusDisplay(task.status)}
                 </span>
             </div>
             <div className="task-details">
@@ -90,7 +99,7 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
                         Delete Task
                     </button>
                 )}
-                {task.status !== 'Completed' && (
+                {task.status && (
                     <>
                         <button className="close-button" onClick={() => onClose(task.taskId)}>
                             Close Task

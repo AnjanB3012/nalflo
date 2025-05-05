@@ -457,8 +457,6 @@ def createNewTask():
             task_title = data.get('task_title')
             task_description = data.get('task_description')
             task_assignees = data.get('task_assignees')
-            if username in task_assignees:
-                task_assignees.remove(username)
             tempSystem.createTask(task_title, task_description, task_assignees, user)
             return jsonify({"message": "Success"})
         else:
@@ -495,16 +493,22 @@ def closeTask():
         user = tempSystem.getUser(username=username)
         if user.getRole().getPermissions()['home']:
             task_id = data.get('task_id')
-            task = tempSystem.findTaskByID(task_id)
-            if task and (task.getCreatorUser().getUserName() == username or username in [u.getUserName() for u in task.getAssignedUsers()]):
-                tempSystem.closeTask(task_id)
-                return jsonify({"message": "Success"})
+            task = tempSystem.findTaskByID(int(task_id))
+            if task:
+                # Check if user is creator or assignee
+                if task.getCreatorUser().getUserName() == username or username in [u.getUserName() for u in task.getAssignedUsers()]:
+                    if tempSystem.closeTask(int(task_id)):
+                        return jsonify({"message": "Success"})
+                    else:
+                        return jsonify({"message": "Failed to close task"})
+                else:
+                    return jsonify({"message": "Permission Denied - Not task creator or assignee"})
             else:
-                return jsonify({"message": "Permission Denied"})
+                return jsonify({"message": "Task not found"})
         else:
-            return jsonify({"message": "Permission Denied"})
+            return jsonify({"message": "Permission Denied - No home permission"})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "Failed - Invalid session"})
 
 @app.route('/api/home/assignUsersToTask', methods=['POST'])
 def assignUsersToTask():

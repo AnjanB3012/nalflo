@@ -354,13 +354,26 @@ class System:
     
     def closeTask(self, taskID: int):
         """
-        Closes a task
+        Closes a task and updates all related user task lists
         Args:
             taskID (int): The ID of the task to close
+        Returns:
+            bool: True if task was closed successfully, False otherwise
         """
         task = findTaskByID(taskID, self.tasks)
         if task:
+            # Update task status
             task.updateStatus(False)
+            
+            # Update task lists for all assigned users and creator
+            all_related_users = set(task.getAssignedUsers() + [task.getCreatorUser()])
+            for user in all_related_users:
+                user_tasks = user.getTasks()
+                for user_task in user_tasks:
+                    if user_task.getTaskId() == taskID:
+                        user_task.updateStatus(False)
+            return True
+        return False
     
     def resetUserPassword(self, username:str, newPassword:str):
         """

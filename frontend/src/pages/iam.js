@@ -7,9 +7,11 @@ import "../styles/iam.css";
 function IAM() {
     const [permissions, setPermissions] = useState(null);
     const [error, setError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
     const [groups, setGroups] = useState([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -23,103 +25,81 @@ function IAM() {
             const parsedCookie = JSON.parse(cookieData);
             const cookieToken = parsedCookie.token;
 
-            // Get permissions from localStorage or fetch them
-            const storedPermissions = localStorage.getItem("user_permissions");
-            if (storedPermissions) {
-                setPermissions(JSON.parse(storedPermissions));
-            } else {
-                try {
-                    const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+            try {
+                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setPermissions(data.permissions);
+                    localStorage.setItem("user_permissions", JSON.stringify(data.permissions));
+                    
+                    // Fetch users
+                    const usersResponse = await fetch("http://localhost:8080/api/iam/getUsers", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
                         },
                         body: JSON.stringify({ cookie_token: cookieToken }),
                     });
-                    const data = await response.json();
-                    if (data.message === "Success") {
-                        setPermissions(data.permissions);
-                        localStorage.setItem("user_permissions", JSON.stringify(data.permissions));
+                    const usersData = await usersResponse.json();
+                    if (usersData.message === "Success") {
+                        setUsers(usersData.users);
+                    } else {
+                        setError(true);
+                        setErrorMessage("Failed to fetch users: " + usersData.message);
                     }
-                } catch (error) {
-                    console.error("Error fetching permissions:", error);
-                    setError("Failed to fetch permissions");
+
+                    // Fetch roles
+                    const rolesResponse = await fetch("http://localhost:8080/api/iam/getRoles", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: cookieToken }),
+                    });
+                    const rolesData = await rolesResponse.json();
+                    if (rolesData.message === "Success") {
+                        setRoles(rolesData.roles);
+                    } else {
+                        setError(true);
+                        setErrorMessage("Failed to fetch roles: " + rolesData.message);
+                    }
+
+                    // Fetch groups
+                    const groupsResponse = await fetch("http://localhost:8080/api/iam/getAllGroups", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: cookieToken }),
+                    });
+                    const groupsData = await groupsResponse.json();
+                    if (groupsData.message === "Success") {
+                        setGroups(groupsData.groups);
+                    } else {
+                        setError(true);
+                        setErrorMessage("Failed to fetch groups: " + groupsData.message);
+                    }
+                } else {
+                    setError(true);
+                    setErrorMessage("Failed to fetch permissions: " + data.message);
                 }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                setError(true);
+                setErrorMessage("Failed to connect to the server");
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchUserData();
     }, [navigate]);
-
-    useEffect(() => {
-        if (permissions && permissions.iam) {
-            // Fetch users
-            fetch("http://localhost:8080/api/iam/getUsers", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ cookie_token: permissions.token }),
-            })
-                .then((response) => response.json())
-                .then((userData) => {
-                    if (userData.message === "Success") {
-                        setUsers(userData.users);
-                    } else {
-                        console.error("Failed to fetch users:", userData.message);
-                        setError(true);
-                    }
-                })
-                .catch((err) => {
-                    console.error("Error fetching users:", err);
-                    setError(true);
-                });
-
-            // Fetch roles
-            fetch("http://localhost:8080/api/iam/getRoles", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ cookie_token: permissions.token }),
-            })
-                .then((response) => response.json())
-                .then((rolesData) => {
-                    if (rolesData.message === "Success") {
-                        setRoles(rolesData.roles);
-                    } else {
-                        console.error("Failed to fetch roles:", rolesData.message);
-                        setError(true);
-                    }
-                })
-                .catch((err) => {
-                    console.error("Error fetching roles:", err);
-                    setError(true);
-                });
-
-            // Fetch groups
-            fetch("http://localhost:8080/api/iam/getAllGroups", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ cookie_token: permissions.token }),
-            })
-                .then((response) => response.json())
-                .then((groupsData) => {
-                    if (groupsData.message === "Success") {
-                        setGroups(groupsData.groups);
-                    } else {
-                        console.error("Failed to fetch groups:", groupsData.message);
-                        setError(true);
-                    }
-                })
-                .catch((err) => {
-                    console.error("Error fetching groups:", err);
-                    setError(true);
-                });
-        }
-    }, [permissions]);
 
     const handleCreateNewUserClick = () => {
         navigate("/createNewUser");
@@ -146,7 +126,26 @@ function IAM() {
     };
 
     if (error) {
-        return <ErrorPage />;
+        return (
+            <div className="iam-container">
+                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} />
+                <div className="error-message">
+                    <h2>Something went wrong</h2>
+                    <p>{errorMessage}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="iam-container">
+                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} />
+                <div className="loading-message">
+                    <h2>Loading...</h2>
+                </div>
+            </div>
+        );
     }
 
     return (

@@ -51,7 +51,10 @@ function TaskView() {
 
     const handleCloseTask = async () => {
         const cookieData = localStorage.getItem("local_cookie");
-        if (!cookieData) return;
+        if (!cookieData) {
+            setError("Session expired. Please login again.");
+            return;
+        }
 
         const parsedCookie = JSON.parse(cookieData);
         const cookieToken = parsedCookie.token;
@@ -70,10 +73,12 @@ function TaskView() {
             const data = await response.json();
             if (data.message === "Success") {
                 navigate('/');
+            } else {
+                setError(data.message);
             }
         } catch (error) {
             console.error("Error closing task:", error);
-            setError("Failed to close task");
+            setError("Failed to close task. Please try again.");
         }
     };
 
@@ -163,6 +168,7 @@ function TaskView() {
         <div className="task-view-container">
             <Navbar />
             <div className="main-content">
+                {error && <div className="error-message">{error}</div>}
                 <div className="task-details-card">
                     <div className="task-header">
                         <h1>{task.title}</h1>
