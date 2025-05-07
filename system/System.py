@@ -627,3 +627,17 @@ class System:
             Task: The task with the ID, None if not found
         """
         return findTaskByID(taskID, self.tasks)
+    
+    def removeTask(self, iTask: Task):
+        """
+        Removes a task by ID
+        Args:
+            taskID (int): The ID of the task
+        """
+        if iTask:
+            self.tasks.remove(iTask)
+            for user in iTask.getAssignedUsers():
+                user.removeTask(iTask)
+            iTask.getCreatorUser().removeTask(iTask)
+            return True
+        return False

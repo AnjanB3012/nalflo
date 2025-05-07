@@ -475,7 +475,7 @@ def deleteTask():
             task_id = data.get('task_id')
             task = tempSystem.findTaskByID(task_id)
             if task and task.getCreatorUser().getUserName() == username:
-                tempSystem.tasks.remove(task)
+                tempSystem.removeTask(task)
                 return jsonify({"message": "Success"})
             else:
                 return jsonify({"message": "Permission Denied"})
