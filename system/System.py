@@ -2,6 +2,7 @@ import os
 import system.Group as Group
 import system.Role as Role
 import system.User as User
+import system.API as API
 import xml.etree.ElementTree as ET
 import system.Task as Task
 import json
@@ -78,6 +79,20 @@ def findGroupByName(inputName: str, groupsList: list[Group]) -> Group:
             return tempGroupVal1
     return None
 
+def findAPIbyName(inputName: str, apisList: list[API]) -> API:
+    """
+    Helper function to find an API by its name
+    Args:
+        inputName (str): The name of the API
+        apisList (list[API]): The list of APIs to search
+    Returns:
+        API: The API with the name, None if not found
+    """
+    for tempAPIVal1 in apisList:
+        if(tempAPIVal1.getApiName()==inputName):
+            return tempAPIVal1
+    return None
+
 class System:
     """
     Class to represent the system
@@ -128,11 +143,13 @@ class System:
         self.roles = []
         self.users = []
         self.tasks = []
-        self.permissions = ["home","iam","AssignToAll"]
+        self.apis = []
+        self.permissions = ["home","iam","AssignToAll", "development"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
             "iam": True,
-            "AssignToAll": True
+            "AssignToAll": True,
+            "development": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
         tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
@@ -226,6 +243,13 @@ class System:
             for tempTask in taskVal.getPreviousTask():
                 task_prev_task_tab = ET.SubElement(task_prev_tab, "TaskID")
                 task_prev_task_tab.text = str(tempTask.getTaskId())
+        apis_save = ET.SubElement(root, "APIs")
+        for apiVal in self.apis:
+            api_tab = ET.SubElement(apis_save, "API")
+            api_tab.set("Name", apiVal.getApiName())
+            api_tab.set("Description", apiVal.getApiDescription())
+            api_tab.set("Endpoint", apiVal.getApiEndpoint())
+            api_tab.set("String", apiVal.getApiString())
         tree = ET.ElementTree(root)
         with open(xml_filename, "wb") as file:
             tree.write(file, encoding="utf-8", xml_declaration=True)
@@ -245,6 +269,7 @@ class System:
         self.groups = []
         self.roles = []
         self.users = []
+        self.apis = []
         for tempRole_loop in root.find("Roles").findall("Role"):
             tempRole = Role.Role(
                 roleTitle=tempRole_loop.get("Title"),
@@ -297,6 +322,14 @@ class System:
                 previousTask=previousTasks
             )
             self.tasks.append(tempTask)
+        for tempAPI_loop in root.find("APIs").findall("API"):
+            tempAPI = API.API(
+                apiName=tempAPI_loop.get("Name"),
+                apiDescription=tempAPI_loop.get("Description"),
+                apiEndpoint=tempAPI_loop.get("Endpoint"),
+                apiString=tempAPI_loop.get("String")
+            )
+            self.apis.append(tempAPI)
 
     #User Methods
     def getUser(self,username:str) -> User:
@@ -641,3 +674,50 @@ class System:
             iTask.getCreatorUser().removeTask(iTask)
             return True
         return False
+    
+    def getSysAPIs(self) -> list[API]:
+        """
+        Method to get the APIs in the system
+        Returns:
+            list[API]: The list of APIs in the system
+        """
+        return self.apis
+    
+    def findAPIByName(self, apiName: str) -> API:
+        """
+        Finds an API by its name
+        Args:
+            apiName (str): The name of the API
+        Returns:
+            API: The API with the given name, None if not found
+        """
+        return findAPIbyName(apiName, self.apis)
+    
+    def addAPI(self, api: API):
+        """
+        Adds an API to the system
+        Args:
+            api (API): The API to add
+        """
+        self.apis.append(api)
+        
+    def removeAPI(self, api: API):
+        """
+        Removes an API from the system
+        Args:
+            api (API): The API to remove
+        """
+        self.apis.remove(api)
+
+    def modifyAPI(self, apiName: str, apiDescription: str):
+        """
+        Modifies an API in the system
+        Args:
+            api (API): The API to modify
+        """
+        tempAPI = self.findAPIByName(apiName, self.apis)
+        if tempAPI:
+            tempAPI.setDescription(apiDescription)
+        else:
+            print("API not found")
+    

@@ -2,6 +2,7 @@ import system.System as System
 import system.Role as Role
 import system.Group as Group
 import system.User as User
+import system.API as API
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_cors import CORS
@@ -18,6 +19,18 @@ cookies = {}
 
 tempSystem = System.System()
 
+def stringFunctionMaker(inputFunctionString):
+    # Indent each line of the user-supplied function body
+    return "\n    ".join(
+        repr(line)[1:-1]
+        for line in inputFunctionString.split("<break>")
+    )
+
+# New APIs go here
+
+
+
+# System APIs go here
 @app.route('/api/homeCheck', methods=['GET'])
 def homeCheck():
     if tempSystem.getSetUpStatus():
@@ -536,5 +549,39 @@ def assignUsersToTask():
     else:
         return jsonify({"message": "Failed"})
 
+@app.route('/api/apis/addNewAPI', methods=['POST'])
+def addNewAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            api_name = data.get('api_name')
+            api_description = data.get('api_description')
+            api_endpoint = data.get('api_endpoint')
+            api_string = data.get('api_string')
+            tempAPI = API.API(apiName=api_name, apiDescription=api_description, apiEndpoint=api_endpoint, apiString=api_string)
+            tempSystem.addAPI(tempAPI)
+            functionStr = stringFunctionMaker(api_string)
+            new_endpoint = (
+                f"@app.route('/{api_endpoint}', methods=['GET', 'POST'])\n"
+                f"def {api_endpoint}():\n"
+                f"    {functionStr}\n"
+            )
+            with open("app.py", "r") as f:
+                content = f.read()
+            head, sep, tail = content.partition("# New APIs go here\n")
+            if not sep:
+                return jsonify({"error": "Marker line not found in hostServer.py"}), 500
+            updated_content = head + sep + new_endpoint + "\n" + tail
+            with open("app.py", "w") as f:
+                f.write(updated_content)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
 if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    app.run(debug=True, port=8080, use_reloader=False)
