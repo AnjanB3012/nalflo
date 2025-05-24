@@ -77,3 +77,16 @@ class API:
             newAPIString (str): The new string representation of the API
         """
         self.apiString = newAPIString
+    
+    def toDict(self) -> dict:
+        """
+        Converts the API object to a dictionary
+        Returns:
+            dict: The API object as a dictionary
+        """
+        return {
+            "apiName": self.apiName,
+            "apiDescription": self.apiDescription,
+            "apiEndpoint": self.apiEndpoint,
+            "apiString": self.apiString
+        }

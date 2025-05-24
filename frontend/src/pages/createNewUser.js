@@ -118,7 +118,7 @@ function CreateNewUser() {
 
     return (
         <div>
-            <Navbar HomePermission={true} IAMPermission={true} />
+            <Navbar />
             <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
                 <h1>Create New User</h1>
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>

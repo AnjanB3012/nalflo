@@ -36,7 +36,6 @@ function IAM() {
                 const data = await response.json();
                 if (data.message === "Success") {
                     setPermissions(data.permissions);
-                    localStorage.setItem("user_permissions", JSON.stringify(data.permissions));
                     
                     // Fetch users
                     const usersResponse = await fetch("http://localhost:8080/api/iam/getUsers", {
@@ -128,7 +127,7 @@ function IAM() {
     if (error) {
         return (
             <div className="iam-container">
-                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} />
+                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
                 <div className="error-message">
                     <h2>Something went wrong</h2>
                     <p>{errorMessage}</p>
@@ -140,7 +139,7 @@ function IAM() {
     if (loading) {
         return (
             <div className="iam-container">
-                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} />
+                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
                 <div className="loading-message">
                     <h2>Loading...</h2>
                 </div>
@@ -150,7 +149,7 @@ function IAM() {
 
     return (
         <div className="iam-container">
-            <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} />
+            <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
             <h1 className="iam-title">Identity and Access Management</h1>
             <div className="card-container">
                 {/* Users Section */}

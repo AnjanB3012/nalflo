@@ -90,7 +90,7 @@ function CreateNewTask() {
 
     return (
         <div className="create-task-container">
-            <Navbar />
+            <Navbar  />
             <div className="main-content">
                 <div className="content-card">
                     <h1>Create New Task</h1>

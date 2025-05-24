@@ -582,6 +582,25 @@ def addNewAPI():
             return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
+    
+@app.route('/api/apis/getAllAPIs', methods=['POST'])
+def getAllAPIs():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = tempSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            apis = tempSystem.getSysAPIs()
+            response = {
+                "message": "Success",
+                "apis": [api.toDict() for api in apis]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080, use_reloader=False)

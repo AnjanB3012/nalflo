@@ -1,6 +1,6 @@
 import "../styles/navbar.css";
 
-function Navbar({ HomePermission, IAMPermission }) {
+function Navbar({ HomePermission, IAMPermission, apisPermission }) {
     const handleLogout = () => {
         localStorage.removeItem("local_cookie");
         window.location.href = "/";
@@ -20,9 +20,15 @@ function Navbar({ HomePermission, IAMPermission }) {
                         IAM
                     </a>
                 )}
+                {apisPermission && (
+                    <a href="/apiengine" className="navbar-link">
+                        API Engine
+                    </a>
+                )}
                 <button onClick={handleLogout} className="logout-button">
                     Logout
                 </button>
+                
             </div>
         </nav>
     );

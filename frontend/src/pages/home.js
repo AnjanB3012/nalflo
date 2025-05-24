@@ -45,28 +45,20 @@ function Home() {
             const parsedCookie = JSON.parse(cookieData);
             const cookieToken = parsedCookie.token;
             setCurrentUser(parsedCookie.username);
-
-            // Get permissions from localStorage or fetch them
-            const storedPermissions = localStorage.getItem("user_permissions");
-            if (storedPermissions) {
-                setPermissions(JSON.parse(storedPermissions));
-            } else {
-                try {
-                    const response = await fetch("http://localhost:8080/api/getUserPermissions", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ cookie_token: cookieToken }),
-                    });
-                    const data = await response.json();
-                    if (data.message === "Success") {
-                        setPermissions(data.permissions);
-                        localStorage.setItem("user_permissions", JSON.stringify(data.permissions));
-                    }
-                } catch (error) {
-                    console.error("Error fetching permissions:", error);
+            try {
+                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setPermissions(data.permissions);
                 }
+            } catch (error) {
+                console.error("Error fetching permissions:", error);
             }
 
             // Fetch tasks
@@ -148,7 +140,7 @@ function Home() {
 
     return (
         <div className="home-container">
-            <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} />
+            <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
             <div className="main-content">
                 <div className="filters-container">
                     <div className="search-container">

@@ -102,7 +102,7 @@ function CreateNewRole() {
     if (error) {
         return (
             <div>
-                {permissions && <Navbar HomePermission={permissions.home} IAMPermission={permissions.iam} />}
+                {permissions && <Navbar HomePermission={permissions.home} IAMPermission={permissions.iam} apisPermission={permissions?.development} />}
                 <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
                     <div style={{ color: "red" }}>{errorMessage}</div>
                 </div>
@@ -112,7 +112,7 @@ function CreateNewRole() {
 
     return (
         <div>
-            {permissions && <Navbar HomePermission={permissions.home} IAMPermission={permissions.iam} />}
+            {permissions && <Navbar HomePermission={permissions.home} IAMPermission={permissions.iam} apisPermission={permissions?.development} />}
             <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
                 <h1>Create New Role</h1>
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
