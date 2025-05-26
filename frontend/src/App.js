@@ -14,6 +14,7 @@ import CreateGroup from './pages/createGroup';
 import CreateNewTask from './pages/createNewTask';
 import TaskView from './pages/TaskView';
 import API from './pages/apis';
+import CreateNewAPI from './pages/createNewAPI';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/createNewTask" element={<CreateNewTask />} />
         <Route path="/task/:taskId" element={<TaskView />} />
         <Route path="/apiengine" element={<API />} />
+        <Route path="createNewAPI" element={<CreateNewAPI />} />
       </Routes>
     </Router>
   );

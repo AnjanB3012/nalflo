@@ -10,9 +10,6 @@ def stringFunctionMaker(inputFunctionString):
     )
 
 # New APIs go here
-@app.route('/test1', methods=['GET', 'POST'])
-def test1():
-    return jsonify({'message':'api working!'})
 
 
 
