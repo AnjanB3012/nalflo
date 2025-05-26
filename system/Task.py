@@ -3,7 +3,7 @@ import system.User as User
 import system.Task as Task
 
 class Task:
-    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, assignedUsers: list[User], creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
+    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, assignedUsers, creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
         self.taskId = taskId
         self.title = titleName
         self.description = description
@@ -35,7 +35,7 @@ class Task:
     def getCreationTimeStamp(self) -> datetime:
         return self.creationTimeStamp
 
-    def getAssignedUsers(self) -> list[User]:
+    def getAssignedUsers(self):
         return self.assignedUsers
     
     def getCreatorUser(self) -> User:

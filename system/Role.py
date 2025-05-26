@@ -19,7 +19,7 @@ class Role:
         getDetails() -> list[str]: Returns the title and description of the role
         __str__() -> str: Returns the title and description
     """
-    def __init__(self,roleTitle: str, roleDescription: str, permissions: dict={}, users: list[User]=None):
+    def __init__(self,roleTitle: str, roleDescription: str, permissions: dict={}, users=None):
         """
         Initializes the Role object
         Args:
@@ -41,7 +41,7 @@ class Role:
         """
         return self.permissions
     
-    def checkPermission(self, permissionRequest: str) -> bool|None:
+    def checkPermission(self, permissionRequest: str):
         """
         Method to check if the role has a permission
         Args:
@@ -62,7 +62,7 @@ class Role:
         """
         self.permissions[permissionName] = permissionValue
 
-    def getUsers(self) -> list[User]:
+    def getUsers(self):
         """
         Getter for the list of users in the role
         Returns:

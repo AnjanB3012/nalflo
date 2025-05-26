@@ -9,7 +9,7 @@ import json
 import datetime
 
 
-def findUniqueTaskID(tasksList: list[Task]) -> int:
+def findUniqueTaskID(tasksList) -> int:
     """
     Helper function to find a unique task ID
     Args:
@@ -23,7 +23,7 @@ def findUniqueTaskID(tasksList: list[Task]) -> int:
             maxId = tempTask.taskId
     return maxId+1
 
-def findTaskByID(taskID: int, tasksList: list[Task]) -> Task:
+def findTaskByID(taskID: int, tasksList) -> Task:
     """
     Helper function to find a task by its ID
     Args:
@@ -37,7 +37,7 @@ def findTaskByID(taskID: int, tasksList: list[Task]) -> Task:
             return tempTaskVal
     return None
 
-def findRoleByTitle(inputTitle: str, rolesList: list[Role]) -> Role:
+def findRoleByTitle(inputTitle: str, rolesList) -> Role:
     """
     Helper function to find a role by its title
     Args:
@@ -51,7 +51,7 @@ def findRoleByTitle(inputTitle: str, rolesList: list[Role]) -> Role:
             return tempRoleVal1
     return None
     
-def findUserByUserName(inputUserName: str, usersList: list[User]) -> User:
+def findUserByUserName(inputUserName: str, usersList) -> User:
     """
     Helper function to find a user by its username
     Args:
@@ -65,7 +65,7 @@ def findUserByUserName(inputUserName: str, usersList: list[User]) -> User:
             return tempUserVal1
     return None
 
-def findGroupByName(inputName: str, groupsList: list[Group]) -> Group:
+def findGroupByName(inputName: str, groupsList) -> Group:
     """
     Helper function to find a group by its name
     Args:
@@ -79,7 +79,7 @@ def findGroupByName(inputName: str, groupsList: list[Group]) -> Group:
             return tempGroupVal1
     return None
 
-def findAPIbyName(inputName: str, apisList: list[API]) -> API:
+def findAPIbyName(inputName: str, apisList) -> API:
     """
     Helper function to find an API by its name
     Args:
@@ -436,7 +436,7 @@ class System:
                 return None
         return None
     
-    def getSysGroups(self) -> list[Group]:
+    def getSysGroups(self):
         """
         Method to get the groups in the system
         Returns:
@@ -463,7 +463,7 @@ class System:
                     else:
                         print(f"User {username} is already in group {tempGroup}")
     
-    def getSysRoles(self) -> list[Role]:
+    def getSysRoles(self):
         """
         Method to get the roles in the system
         Returns:
@@ -491,7 +491,7 @@ class System:
         else:    
             print("User not found")
 
-    def getSysUsers(self) -> list[User]:
+    def getSysUsers(self):
         """
         Method to get the users in the system
         Returns:
@@ -619,7 +619,7 @@ class System:
         # Remove group from system
         self.groups.remove(group)
 
-    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task]=[]):
+    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask=[]):
         """
         Creates a new task
         Args:
@@ -675,7 +675,7 @@ class System:
             return True
         return False
     
-    def getSysAPIs(self) -> list[API]:
+    def getSysAPIs(self):
         """
         Method to get the APIs in the system
         Returns:

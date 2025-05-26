@@ -1,0 +1,14 @@
+# Prevent bloated builds
+node_modules/
+frontend/node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+*.log
+.env
+*.zip
+*.tar.gz
+*.sqlite3
+.idea/
+*.db
