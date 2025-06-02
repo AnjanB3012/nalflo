@@ -621,25 +621,35 @@ class System:
 
     def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask=[]):
         """
-        Creates a new task
+        Method to create a new task
         Args:
             taskTitle (str): The title of the task
             taskDescription (str): The description of the task
-            taskAssignees (list[str]): List of usernames to assign the task to
+            taskAssignees (list[str]): The list of usernames to assign the task to
             creatorUser (User): The user creating the task
-            previousTask (list[Task], optional): List of previous tasks. Defaults to [].
+            previousTask (list[Task]): The list of previous tasks (for replies)
         """
+        # Check for duplicate tasks
+        for existing_task in self.tasks:
+            if (existing_task.getTitle() == taskTitle and 
+                existing_task.getDescription() == taskDescription and
+                existing_task.getCreatorUser() == creatorUser and
+                existing_task.getCreationTimeStamp() > datetime.datetime.now() - datetime.timedelta(minutes=5)):
+                raise ValueError("A similar task was created recently. Please wait a few minutes before creating another task.")
+        
         taskId = findUniqueTaskID(self.tasks)
         assignedUsers = []
-        for username in taskAssignees:
-            user = findUserByUserName(username, self.users)
-            if user:
-                assignedUsers.append(user)
-        newTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
-        self.tasks.append(newTask)
+        for assignee in taskAssignees:
+            tempUser = findUserByUserName(assignee, self.users)
+            if tempUser:
+                assignedUsers.append(tempUser)
+        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        self.tasks.append(tempTask)
+        # Add task to creator's task list
+        creatorUser.addTask(tempTask)
+        # Add task to assignees' task lists
         for user in assignedUsers:
-            user.addTask(newTask)
-        creatorUser.addTask(newTask)
+            user.addTask(tempTask)
 
     def getTask(self, taskID: int) -> Task:
         """

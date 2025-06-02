@@ -5,6 +5,7 @@ function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [data, setData] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     const loginCred = localStorage.getItem("local_cookie");
@@ -67,6 +68,12 @@ function Login() {
         }
     };
 
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleLogin();
+        }
+    };
+
     if (!data) {
         return <div>Loading...</div>;
     }
@@ -91,6 +98,7 @@ function Login() {
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                onKeyPress={handleKeyPress}
                 style={{
                     width: '100%',
                     padding: '10px',
@@ -101,21 +109,40 @@ function Login() {
                     fontSize: '16px',
                 }}
             />
-            <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{
-                    width: '100%',
-                    padding: '10px',
-                    marginBottom: '20px',
-                    borderRadius: '5px',
-                    border: '1px solid #032cfc',
-                    outline: 'none',
-                    fontSize: '16px',
-                }}
-            />
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+                <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '5px',
+                        border: '1px solid #032cfc',
+                        outline: 'none',
+                        fontSize: '16px',
+                    }}
+                />
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#032cfc',
+                        fontSize: '14px',
+                    }}
+                >
+                    {showPassword ? 'Hide' : 'Show'}
+                </button>
+            </div>
             <button
                 onClick={handleLogin}
                 style={{

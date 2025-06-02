@@ -159,4 +159,135 @@
     border-radius: 4px;
     margin-bottom: 20px;
     text-align: center;
+}
+
+.reply-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 14px;
+}
+
+.reply-button:hover {
+    background-color: #45a049;
+}
+
+.reply-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.reply-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+}
+
+.reply-content h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: #333;
+}
+
+.reply-content textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.previous-tasks-section {
+    margin-top: 24px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.previous-tasks-section h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: #333;
+    font-size: 1.5em;
+}
+
+.previous-task-card {
+    background-color: white;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.previous-task-card h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.previous-task-card p {
+    margin: 8px 0;
+    color: #666;
+}
+
+.previous-task-card strong {
+    color: #333;
+}
+
+.reply-content .assignees-section {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.reply-content .assignees-section h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.reply-content .users-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    background-color: #f8f9fa;
+}
+
+.reply-content .user-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.reply-content .user-checkbox:last-child {
+    margin-bottom: 0;
+}
+
+.reply-content .user-checkbox input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.reply-content .user-checkbox label {
+    color: #333;
+    font-size: 14px;
 } 

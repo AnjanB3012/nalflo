@@ -9,13 +9,14 @@ from flask_cors import CORS
 from flask_login import LoginManager, login_user
 from uuid import uuid4
 from datetime import datetime, timezone
+from pyhold import pyhold
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
 
 CORS(app, supports_credentials=True)
 
-cookies = {}
+cookies = pyhold()
 
 tempSystem = System.System()
 
@@ -55,7 +56,7 @@ def loginUser():
     password = data.get('password')
     if tempSystem.loginUser(inputUsername=username, inputPassword=password):
         tempCookie = str(uuid4())
-        cookies[tempCookie] = [username, datetime.now(timezone.utc)]
+        cookies[tempCookie] = [username, str(datetime.now(timezone.utc))]
         return jsonify({"message": "Success", "cookie_token": tempCookie})
     else:
         return jsonify({"message": "Failed"})
@@ -67,6 +68,8 @@ def getUserPermissions():
     if cookie_token in cookies:
         username = cookies[cookie_token][0]
         user = tempSystem.getUser(username=username)
+        if user is None:
+            return jsonify({"message": "User not found"})
         permissions = user.getRole().getPermissions()
         response = {
             "message": "Success",
@@ -102,6 +105,8 @@ def getUserTasks():
     if cookie_token in cookies:
         username = cookies[cookie_token][0]
         user = tempSystem.getUser(username=username)
+        if user is None:
+            return jsonify({"message": "User not found"})
         if user.getRole().getPermissions()['home']:
             tasks = user.getTasks()
             response = {
@@ -441,17 +446,15 @@ def getAssignableUsersToTask():
                 return jsonify(response)
             else:
                 userGroups = user.getGroups()
-                assignableUsers = {}
+                assignableUsers = []
                 for group in userGroups:
                     users1 = group.getUsers()
                     for user1 in users1:
-                        if user1==user:
-                            continue
-                        else:
-                            assignableUsers[user1.getName()] = user1.getUserName()
+                        if user1 != user and user1 not in assignableUsers:
+                            assignableUsers.append(user1)
                 response = {
                     "message": "Success",
-                    "users": assignableUsers
+                    "users": [user.toDict() for user in assignableUsers]
                 }
                 return jsonify(response)
         else:
@@ -470,8 +473,50 @@ def createNewTask():
             task_title = data.get('task_title')
             task_description = data.get('task_description')
             task_assignees = data.get('task_assignees')
-            tempSystem.createTask(task_title, task_description, task_assignees, user)
-            return jsonify({"message": "Success"})
+            previous_task_id = data.get('previous_task_id')
+            
+            # Validate required fields
+            if not task_title or not task_description:
+                return jsonify({"message": "Task title and description are required"})
+            
+            previous_task = None
+            if previous_task_id:
+                previous_task = tempSystem.findTaskByID(int(previous_task_id))
+                if not previous_task:
+                    return jsonify({"message": "Previous task not found"})
+                
+                # Check if user has permission to reply to this task
+                if (username != previous_task.getCreatorUser().getUserName() and 
+                    username not in [u.getUserName() for u in previous_task.getAssignedUsers()]):
+                    return jsonify({"message": "You don't have permission to reply to this task"})
+                
+                # For reply tasks, ensure the creator and original task creator are included
+                if previous_task:
+                    # Add the original task creator if not already in assignees
+                    if previous_task.getCreatorUser().getUserName() not in task_assignees:
+                        task_assignees.append(previous_task.getCreatorUser().getUserName())
+                    # Add the current user if not already in assignees
+                    if username not in task_assignees:
+                        task_assignees.append(username)
+                    
+                    # If this is a reply task, close the previous task
+                    # Check if current user is either creator or assignee of previous task
+                    if (username == previous_task.getCreatorUser().getUserName() or 
+                        username in [u.getUserName() for u in previous_task.getAssignedUsers()]):
+                        tempSystem.closeTask(previous_task.getTaskId())
+            
+            # Create the task
+            try:
+                tempSystem.createTask(
+                    task_title, 
+                    task_description, 
+                    task_assignees, 
+                    user,
+                    previousTask=[previous_task] if previous_task else []
+                )
+                return jsonify({"message": "Success"})
+            except Exception as e:
+                return jsonify({"message": f"Failed to create task: {str(e)}"})
         else:
             return jsonify({"message": "Permission Denied"})
     else:
@@ -509,7 +554,8 @@ def closeTask():
             task = tempSystem.findTaskByID(int(task_id))
             if task:
                 # Check if user is creator or assignee
-                if task.getCreatorUser().getUserName() == username or username in [u.getUserName() for u in task.getAssignedUsers()]:
+                if (task.getCreatorUser().getUserName() == username or 
+                    username in [u.getUserName() for u in task.getAssignedUsers()]):
                     if tempSystem.closeTask(int(task_id)):
                         return jsonify({"message": "Success"})
                     else:
@@ -537,10 +583,22 @@ def assignUsersToTask():
                 new_assignees.remove(username)
             task = tempSystem.findTaskByID(int(task_id))
             if task and task.getCreatorUser().getUserName() == username:
+                # Get current assignees
+                current_assignees = [u.getUserName() for u in task.getAssignedUsers()]
+                
+                # Remove users that are no longer assigned
+                for current_assignee in current_assignees:
+                    if current_assignee not in new_assignees:
+                        assignee_user = tempSystem.getUser(current_assignee)
+                        if assignee_user:
+                            task.assignedUsers.remove(assignee_user)
+                
+                # Add new assignees
                 for assignee in new_assignees:
-                    assignee_user = tempSystem.getUser(assignee)
-                    if assignee_user:
-                        task.assignUser(assignee_user)
+                    if assignee not in current_assignees:
+                        assignee_user = tempSystem.getUser(assignee)
+                        if assignee_user:
+                            task.assignUser(assignee_user)
                 return jsonify({"message": "Success"})
             else:
                 return jsonify({"message": "Permission Denied"})
