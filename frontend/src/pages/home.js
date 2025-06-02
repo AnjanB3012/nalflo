@@ -23,10 +23,10 @@ function Home() {
                 body: JSON.stringify({ cookie_token: cookieToken }),
             });
             const data = await response.json();
-            console.log("Received tasks data:", data); // Debug log
+            console.log("Received tasks data:", data);
             if (data.message === "Success") {
                 setTasks(data.tasks);
-                console.log("Set tasks:", data.tasks); // Debug log
+                console.log("Set tasks:", data.tasks);
             } else {
                 setError(data.message);
             }
@@ -151,20 +151,6 @@ function Home() {
                     </div>
                     <div className="filter-buttons">
                         <button
-                            className={`filter-button ${showCompleted ? 'active' : ''}`}
-                            onClick={() => {
-                                setShowCompleted(true);
-                                // Refresh tasks when switching views
-                                const cookieData = localStorage.getItem("local_cookie");
-                                if (cookieData) {
-                                    const parsedCookie = JSON.parse(cookieData);
-                                    fetchTasks(parsedCookie.token);
-                                }
-                            }}
-                        >
-                            Show All
-                        </button>
-                        <button
                             className={`filter-button ${!showCompleted ? 'active' : ''}`}
                             onClick={() => {
                                 setShowCompleted(false);
@@ -177,6 +163,20 @@ function Home() {
                             }}
                         >
                             Show Active Only
+                        </button>
+                        <button
+                            className={`filter-button ${showCompleted ? 'active' : ''}`}
+                            onClick={() => {
+                                setShowCompleted(true);
+                                // Refresh tasks when switching views
+                                const cookieData = localStorage.getItem("local_cookie");
+                                if (cookieData) {
+                                    const parsedCookie = JSON.parse(cookieData);
+                                    fetchTasks(parsedCookie.token);
+                                }
+                            }}
+                        >
+                            Show All
                         </button>
                         <button
                             className="create-task-button"
@@ -225,7 +225,17 @@ function Home() {
                                             </td>
                                             <td>{task.creatorUser?.userName || 'Unknown'}</td>
                                             <td>{new Date(task.creationTimeStamp).toLocaleString()}</td>
-                                            <td>{task.assignedUsers?.map(user => user.userName).join(', ') || 'None'}</td>
+                                            <td>
+                                                {(() => {
+                                                    const assignees = task.assignedUsers?.filter(user => user.userName !== task.creatorUser?.userName) || [];
+                                                    const creator = task.creatorUser?.userName;
+                                                    const assigneeList = assignees.map(user => user.userName);
+                                                    if (creator) {
+                                                        assigneeList.unshift(`${creator} (Creator)`);
+                                                    }
+                                                    return assigneeList.join(', ') || 'None';
+                                                })()}
+                                            </td>
                                             <td className="actions-cell">
                                                 <button
                                                     className="view-button"

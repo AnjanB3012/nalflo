@@ -290,4 +290,181 @@
 .reply-content .user-checkbox label {
     color: #333;
     font-size: 14px;
+}
+
+.nested-previous-tasks {
+    margin-top: 16px;
+    margin-left: 24px;
+    padding-left: 16px;
+    border-left: 2px solid #e0e0e0;
+}
+
+.nested-previous-task-card {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.nested-previous-task-card h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.nested-previous-task-card p {
+    margin: 6px 0;
+    color: #666;
+    font-size: 0.95em;
+}
+
+.nested-previous-task-card strong {
+    color: #333;
+}
+
+.task-timeline {
+    position: relative;
+    padding: 20px 0;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.timeline-task-card {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-task-card.current-task {
+    margin-bottom: 30px;
+}
+
+.timeline-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    position: relative;
+}
+
+.timeline-task-card.current-task .timeline-content {
+    border: 2px solid #007bff;
+    background-color: white;
+}
+
+.timeline-task-card.reply-task .timeline-content {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    margin-left: 40px;
+    position: relative;
+}
+
+.timeline-task-card.reply-task .timeline-content::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 20px;
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid #e0e0e0;
+}
+
+.timeline-content .task-header {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.timeline-content .task-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.timeline-task-card.reply-task .timeline-content .task-header h3 {
+    color: #666;
+    font-size: 1.1em;
+}
+
+.timeline-content .task-info {
+    margin-bottom: 15px;
+}
+
+.timeline-content .task-info p {
+    margin: 8px 0;
+    color: #666;
+    font-size: 0.95em;
+}
+
+.timeline-task-card.reply-task .timeline-content .task-info p {
+    color: #888;
+    font-size: 0.9em;
+}
+
+.timeline-content .task-actions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/* Remove previous timeline connector styles */
+.timeline-connector {
+    display: none;
+}
+
+/* Update status badge styles */
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.status-badge.open {
+    background-color: #e6f4ea;
+    color: #1e7e34;
+}
+
+.status-badge.closed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Add subtle border between replies */
+.timeline-task-card.reply-task + .timeline-task-card.reply-task {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 20px;
+}
+
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-spinner span {
+    color: #666;
+    font-size: 16px;
 } 

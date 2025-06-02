@@ -14,50 +14,61 @@ function TaskView() {
     const [showReplyModal, setShowReplyModal] = useState(false);
     const [replyDescription, setReplyDescription] = useState('');
     const [parsedCookie, setParsedCookie] = useState(null);
+    const [taskTimeline, setTaskTimeline] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Function to recursively fetch all previous tasks
+    const fetchTaskChain = async (taskId, cookieToken) => {
+        try {
+            const response = await fetch("http://localhost:8080/api/home/getUserTasks", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ cookie_token: cookieToken }),
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                const currentTask = data.tasks.find(t => t.taskId === parseInt(taskId));
+                if (currentTask) {
+                    setTask(currentTask);
+                    const timeline = [currentTask];
+                    let previousTask = currentTask.previousTask?.[0];
+                    
+                    while (previousTask) {
+                        const prevTask = data.tasks.find(t => t.taskId === previousTask.taskId);
+                        if (prevTask) {
+                            timeline.unshift(prevTask);
+                            previousTask = prevTask.previousTask?.[0];
+                        } else {
+                            break;
+                        }
+                    }
+                    setTaskTimeline(timeline);
+                } else {
+                    setError("Task not found");
+                }
+            } else {
+                setError(data.message || "Failed to fetch task");
+            }
+        } catch (error) {
+            console.error("Error fetching task chain:", error);
+            setError("Failed to fetch task history");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         const cookieData = localStorage.getItem("local_cookie");
-        if (cookieData) {
-            setParsedCookie(JSON.parse(cookieData));
+        if (!cookieData) {
+            navigate('/login');
+            return;
         }
-    }, []);
 
-    useEffect(() => {
-        const fetchTask = async () => {
-            const cookieData = localStorage.getItem("local_cookie");
-            if (!cookieData) {
-                navigate('/login');
-                return;
-            }
-
-            const parsedCookie = JSON.parse(cookieData);
-            setParsedCookie(parsedCookie);
-            const cookieToken = parsedCookie.token;
-
-            try {
-                const response = await fetch("http://localhost:8080/api/home/getUserTasks", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ cookie_token: cookieToken }),
-                });
-                const data = await response.json();
-                if (data.message === "Success") {
-                    const foundTask = data.tasks.find(t => t.taskId === parseInt(taskId));
-                    if (foundTask) {
-                        setTask(foundTask);
-                    } else {
-                        setError("Task not found");
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching task:", error);
-                setError("Failed to fetch task");
-            }
-        };
-
-        fetchTask();
+        const parsedCookie = JSON.parse(cookieData);
+        setParsedCookie(parsedCookie);
+        fetchTaskChain(taskId, parsedCookie.token);
     }, [taskId, navigate]);
 
     const handleCloseTask = async () => {
@@ -259,12 +270,26 @@ function TaskView() {
         }
     }, [showReplyModal, task]);
 
-    if (!task) {
+    if (loading) {
         return (
             <div className="task-view-container">
                 <Navbar />
                 <div className="main-content">
-                    {error ? <div className="error-message">{error}</div> : <div>Loading...</div>}
+                    <div className="loading-spinner">
+                        <div className="spinner"></div>
+                        <span>Loading task history...</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="task-view-container">
+                <Navbar />
+                <div className="main-content">
+                    <div className="error-message">{error}</div>
                 </div>
             </div>
         );
@@ -274,49 +299,50 @@ function TaskView() {
         <div className="task-view-container">
             <Navbar />
             <div className="main-content">
-                {error && <div className="error-message">{error}</div>}
-                <div className="task-details-card">
-                    <div className="task-header">
-                        <h1>{task.title}</h1>
-                        <span className={`status-badge ${task.status ? 'open' : 'closed'}`}>
-                            {task.status ? 'Open' : 'Closed'}
-                        </span>
-                    </div>
-                    <div className="task-info">
-                        <p><strong>Description:</strong> {task.description}</p>
-                        <p><strong>Created by:</strong> {task.creatorUser?.userName || 'Unknown'}</p>
-                        <p><strong>Created on:</strong> {new Date(task.creationTimeStamp).toLocaleString()}</p>
-                        <p><strong>Assigned to:</strong> {task.assignedUsers?.map(user => user.userName).join(', ') || 'None'}</p>
-                    </div>
-                    {task.status && (
-                        <div className="task-actions">
-                            {(task.creatorUser?.userName === parsedCookie?.username || 
-                              task.assignedUsers?.some(user => user.userName === parsedCookie?.username)) && (
-                                <button className="close-button" onClick={handleCloseTask}>
-                                    Close Task
-                                </button>
-                            )}
-                            <button className="reply-button" onClick={handleReply}>
-                                Reply
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {task.previousTask && task.previousTask.length > 0 && (
-                    <div className="previous-tasks-section">
-                        <h2>Previous Tasks</h2>
-                        {task.previousTask.map(prevTask => (
-                            <div key={prevTask.taskId} className="previous-task-card">
-                                <h3>{prevTask.title}</h3>
-                                <p><strong>Description:</strong> {prevTask.description}</p>
-                                <p><strong>Created by:</strong> {prevTask.creatorUser?.userName || 'Unknown'}</p>
-                                <p><strong>Created on:</strong> {new Date(prevTask.creationTimeStamp).toLocaleString()}</p>
-                                <p><strong>Status:</strong> {prevTask.status ? 'Open' : 'Closed'}</p>
+                {/* Task Timeline */}
+                <div className="task-timeline">
+                    {taskTimeline.slice().reverse().map((task, index) => (
+                        <div key={task.taskId} className={`timeline-task-card ${index === 0 ? 'current-task' : 'reply-task'}`}>
+                            <div className="timeline-content">
+                                <div className="task-header">
+                                    <h3>{task.title}</h3>
+                                    {index === 0 && (
+                                        <span className={`status-badge ${task.status ? 'open' : 'closed'}`}>
+                                            {task.status ? 'Open' : 'Closed'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="task-info">
+                                    <p><strong>Description:</strong> {task.description}</p>
+                                    <p><strong>From:</strong> {task.creatorUser?.userName || 'Unknown'}</p>
+                                    <p><strong>Date:</strong> {new Date(task.creationTimeStamp).toLocaleString()}</p>
+                                    <p><strong>To:</strong> {(() => {
+                                        const assignees = task.assignedUsers?.filter(user => user.userName !== task.creatorUser?.userName) || [];
+                                        const creator = task.creatorUser?.userName;
+                                        const assigneeList = assignees.map(user => user.userName);
+                                        if (creator) {
+                                            assigneeList.unshift(`${creator} (Creator)`);
+                                        }
+                                        return assigneeList.join(', ') || 'None';
+                                    })()}</p>
+                                </div>
+                                {index === 0 && task.status && (
+                                    <div className="task-actions">
+                                        {(task.creatorUser?.userName === parsedCookie?.username || 
+                                          task.assignedUsers?.some(user => user.userName === parsedCookie?.username)) && (
+                                            <button className="close-button" onClick={handleCloseTask}>
+                                                Close Task
+                                            </button>
+                                        )}
+                                        <button className="reply-button" onClick={handleReply}>
+                                            Reply
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                )}
+                        </div>
+                    ))}
+                </div>
 
                 {showAssignUsers && (
                     <div className="assign-users-modal">
@@ -350,41 +376,16 @@ function TaskView() {
                 )}
 
                 {showReplyModal && (
-                    <div className="modal-overlay" style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        zIndex: 1000
-                    }}>
-                        <div className="modal-content" style={{
-                            backgroundColor: 'white',
-                            padding: '20px',
-                            borderRadius: '8px',
-                            width: '80%',
-                            maxWidth: '600px',
-                            maxHeight: '80vh',
-                            overflowY: 'auto'
-                        }}>
-                            <h2>Reply to Task</h2>
+                    <div className="reply-modal">
+                        <div className="reply-content">
+                            <h3>Reply to Task</h3>
                             <div className="form-group">
                                 <label>Description:</label>
                                 <textarea
                                     value={replyDescription}
                                     onChange={(e) => setReplyDescription(e.target.value)}
                                     placeholder="Enter your reply..."
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '100px',
-                                        marginTop: '8px',
-                                        padding: '8px'
-                                    }}
+                                    rows="4"
                                 />
                             </div>
                             <div className="form-group">
@@ -394,45 +395,95 @@ function TaskView() {
                                     overflowY: 'auto',
                                     marginTop: '8px'
                                 }}>
+                                    {/* Show creator first */}
+                                    <div className="user-assignment-item" style={{
+                                        marginBottom: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        opacity: '0.7'
+                                    }}>
+                                        <label style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            cursor: 'not-allowed'
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={true}
+                                                disabled={true}
+                                                style={{ marginRight: '8px' }}
+                                            />
+                                            <span>
+                                                {task.creatorUser.userName} (Creator)
+                                            </span>
+                                        </label>
+                                    </div>
+                                    {/* Then show current assignees (excluding creator) */}
+                                    {task.assignedUsers.map(user => {
+                                        if (user.userName !== task.creatorUser.userName) {
+                                            return (
+                                                <div key={user.userName} className="user-assignment-item" style={{
+                                                    marginBottom: '8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    opacity: '0.7'
+                                                }}>
+                                                    <label style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        cursor: 'not-allowed'
+                                                    }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={true}
+                                                            disabled={true}
+                                                            style={{ marginRight: '8px' }}
+                                                        />
+                                                        <span>
+                                                            {user.userName} (Current Assignee)
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                    {/* Then show assignable users */}
                                     {assignableUsers.map(user => {
                                         const isCurrentAssignee = task.assignedUsers.some(
                                             assignedUser => assignedUser.userName === user.userName
                                         );
-                                        const isAssignable = selectedUsers.includes(user.userName);
-                                        const canUnassign = assignableUsers.some(
-                                            assignableUser => assignableUser.userName === user.userName
-                                        );
-                                        
-                                        return (
-                                            <div key={user.userName} className="user-assignment-item" style={{
-                                                marginBottom: '8px',
-                                                display: 'flex',
-                                                alignItems: 'center'
-                                            }}>
-                                                <label style={{
+                                        const isCreator = task.creatorUser.userName === user.userName;
+                                        if (!isCurrentAssignee && !isCreator) {
+                                            return (
+                                                <div key={user.userName} className="user-assignment-item" style={{
+                                                    marginBottom: '8px',
                                                     display: 'flex',
-                                                    alignItems: 'center',
-                                                    cursor: canUnassign ? 'pointer' : 'not-allowed'
+                                                    alignItems: 'center'
                                                 }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isAssignable}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedUsers([...selectedUsers, user.userName]);
-                                                            } else {
-                                                                setSelectedUsers(selectedUsers.filter(u => u !== user.userName));
-                                                            }
-                                                        }}
-                                                        style={{ marginRight: '8px' }}
-                                                    />
-                                                    <span>
-                                                        {user.userName}
-                                                        {isCurrentAssignee && " (Current Assignee)"}
-                                                    </span>
-                                                </label>
-                                            </div>
-                                        );
+                                                    <label style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        cursor: 'pointer'
+                                                    }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedUsers.includes(user.userName)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedUsers([...selectedUsers, user.userName]);
+                                                                } else {
+                                                                    setSelectedUsers(selectedUsers.filter(u => u !== user.userName));
+                                                                }
+                                                            }}
+                                                            style={{ marginRight: '8px' }}
+                                                        />
+                                                        <span>{user.userName}</span>
+                                                    </label>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
                                     })}
                                 </div>
                             </div>
@@ -460,14 +511,13 @@ function TaskView() {
                                 </button>
                                 <button 
                                     onClick={handleReplySubmit}
-                                    disabled={!replyDescription.trim()}
                                     style={{
                                         padding: '8px 16px',
                                         borderRadius: '4px',
                                         border: 'none',
-                                        backgroundColor: !replyDescription.trim() ? '#ccc' : '#007bff',
+                                        backgroundColor: '#007bff',
                                         color: 'white',
-                                        cursor: !replyDescription.trim() ? 'not-allowed' : 'pointer'
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     Submit Reply
