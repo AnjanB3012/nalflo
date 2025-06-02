@@ -127,7 +127,7 @@ class System:
         """
         return self.setUpStatus
 
-    def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str):
+    def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str, aiAccessToken: str):
         """
         Method to set up the instance
         Args:
@@ -159,8 +159,161 @@ class System:
         self.roles.append(tempRole)
         self.groups.append(tempGroup)
         self.setUpStatus = True
+        self.aiAccessToken = aiAccessToken
+        system_apis = [
+            API.API(
+                "Get System Users",
+                """Retrieves all users in the system. Returns a list of user objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemUsers",
+                "None"
+            ),
+            API.API(
+                "Get System Roles",
+                """Retrieves all roles in the system. Returns a list of role objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemRoles",
+                "None"
+            ),
+            API.API(
+                "Get System Groups",
+                """Retrieves all groups in the system. Returns a list of group objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemGroups",
+                "None"
+            ),
+            API.API(
+                "Get System APIs",
+                """Retrieves all APIs in the system. Returns a list of API objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemAPIs",
+                "None"
+            ),
+            API.API(
+                "Get System Tasks",
+                """Retrieves all tasks in the system. Returns a list of task objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemTasks",
+                "None"
+            ),
+            API.API(
+                "Fetch User",
+                """Retrieves a specific user by username. Returns user object with details.
+Required JSON:
+{
+    "username": "string (required)"
+}""",
+                "/ai/fetchUser",
+                "None"
+            ),
+            API.API(
+                "Fetch Role",
+                """Retrieves a specific role by role name. Returns role object with details.
+Required JSON:
+{
+    "roleName": "string (required)"
+}""",
+                "/ai/fetchRole",
+                "None"
+            ),
+            API.API(
+                "Fetch Group",
+                """Retrieves a specific group by group name. Returns group object with details.
+Required JSON:
+{
+    "groupName": "string (required)"
+}""",
+                "/ai/fetchGroup",
+                "None"
+            ),
+            API.API(
+                "Fetch API",
+                """Retrieves a specific API by API name. Returns API object with details.
+Required JSON:
+{
+    "apiName": "string (required)"
+}""",
+                "/ai/fetchAPI",
+                "None"
+            ),
+            API.API(
+                "Fetch Task",
+                """Retrieves a specific task by task ID. Returns task object with details.
+Required JSON:
+{
+    "taskId": "integer (required)"
+}""",
+                "/ai/fetchTask",
+                "None"
+            ),
+            API.API(
+                "Create Task",
+                """Creates a new task with specified details and assigns it to users.
+Required JSON:
+{
+    "taskName": "string (required)",
+    "taskDescription": "string (required)",
+    "taskStatus": "boolean (required)",
+    "assignees": ["string (required)"] - List of usernames to assign the task to
+}""",
+                "/ai/createTask",
+                "None"
+            ),
+            API.API(
+                "Update Task",
+                """Updates an existing task with new details.
+Required JSON:
+{
+    "taskId": "integer (required)",
+    "taskName": "string (required)",
+    "taskDescription": "string (required)",
+    "taskStatus": "boolean (required)"
+}""",
+                "/ai/updateTask",
+                "None"
+            ),
+            API.API(
+                "Delete Task",
+                """Deletes a task by its ID.
+Required JSON:
+{
+    "taskId": "integer (required)"
+}""",
+                "/ai/deleteTask",
+                "None"
+            ),
+            API.API(
+                "Close Task",
+                """Closes a task by its ID.
+Required JSON:
+{
+    "taskId": "integer (required)"
+}""",
+                "/ai/closeTask",
+                "None"
+            ),
+            API.API(
+                "Assign Users to Task",
+                """Assigns multiple users to a task.
+Required JSON:
+{
+    "assignees": ["string (required)"] - List of usernames to assign,
+    "taskName": "string (required)"
+}""",
+                "/ai/assignUsersToTask",
+                "None"
+            )
+        ]
+
+        # Add all system APIs to the instance
+        for api in system_apis:
+            self.apis.append(api)
         self.saveInstance()
-        
     def saveInstance(self):
         """
         Method to save the instance to an XML file
@@ -179,6 +332,8 @@ class System:
         customerEmail.text = self.contactEmail
         domain = ET.SubElement(root,"domain")
         domain.text = self.domain
+        aiAccessToken = ET.SubElement(root,"aiAccessToken")
+        aiAccessToken.text = self.aiAccessToken
         groups_save = ET.SubElement(root,"Groups")
         for groupVal in self.groups:
             group_det = groupVal.getDetails()
@@ -269,6 +424,7 @@ class System:
         self.groups = []
         self.roles = []
         self.users = []
+        self.aiAccessToken = root.find("aiAccessToken").text
         self.apis = []
         for tempRole_loop in root.find("Roles").findall("Role"):
             tempRole = Role.Role(
@@ -407,6 +563,14 @@ class System:
                         user_task.updateStatus(False)
             return True
         return False
+    
+    def getAIAccessToken(self) -> str:
+        """
+        Getter for the AI access token
+        Returns:
+            str: The AI access token
+        """
+        return self.aiAccessToken
     
     def resetUserPassword(self, username:str, newPassword:str):
         """
@@ -730,4 +894,49 @@ class System:
             tempAPI.setDescription(apiDescription)
         else:
             print("API not found")
+
+    def assignUserToTask(self, username: str, taskTitle: str):
+        """
+        Assigns a user to a task
+        Args:
+            username (str): The username of the user
+            taskTitle (str): The title of the task  
+        """
+        tempUser = findUserByUserName(username, self.users)
+        if tempUser:
+            tempTask = findTaskByID(taskTitle, self.tasks)
+            if tempTask:
+                tempTask.addUser(tempUser)
+                tempUser.addTask(tempTask)
+                return True
+        return False
+    
+    def updateTask(self, taskID: int, taskTitle: str, taskDescription: str, taskStatus: bool):
+        """
+        Updates a task
+        Args:
+            taskID (int): The ID of the task
+            taskTitle (str): The title of the task  
+            taskDescription (str): The description of the task
+            taskStatus (bool): The status of the task
+        """
+        tempTask = findTaskByID(taskID, self.tasks)
+        if tempTask:
+            tempTask.setTitle(taskTitle)
+            tempTask.setDescription(taskDescription)
+            tempTask.setStatus(taskStatus)  
+            return True
+        return False
+    
+    def deleteTask(self, taskID: int):
+        """
+        Deletes a task
+        Args:
+            taskID (int): The ID of the task
+        """
+        tempTask = findTaskByID(taskID, self.tasks)
+        if tempTask:
+            self.tasks.remove(tempTask)
+            return True
+        return False
     

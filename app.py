@@ -10,13 +10,14 @@ from flask_login import LoginManager, login_user
 from uuid import uuid4
 from datetime import datetime, timezone
 from pyhold import pyhold
+import uuid
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
 
 CORS(app, supports_credentials=True)
 
-cookies = pyhold()
+cookies = pyhold("cookies.xml")
 
 tempSystem = System.System()
 
@@ -31,7 +32,158 @@ def stringFunctionMaker(inputFunctionString):
 
 
 
-# System APIs go here
+# AI Access System APIs go here
+@app.route('/ai/getSystemUsers', methods=['POST'])
+def getSystemUsers():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        users = tempSystem.getSysUsers()
+        return jsonify({"message": "Success", "users": [user.toDict() for user in users]})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/ai/getSystemRoles', methods=['POST'])
+def getSystemRoles():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        roles = tempSystem.getSysRoles()
+        return jsonify({"message": "Success", "roles": [role.toDict() for role in roles]})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/getSystemGroups', methods=['POST'])
+def getSystemGroups():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        groups = tempSystem.getSysGroups()
+        return jsonify({"message": "Success", "groups": [group.toDict() for group in groups]})
+    
+@app.route('/ai/getSystemAPIs', methods=['POST'])
+def getSystemAPIs():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        apis = tempSystem.getSysAPIs()
+        return jsonify({"message": "Success", "apis": [api.toDict() for api in apis]})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/getSystemTasks', methods=['POST'])
+def getSystemTasks():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        tasks = tempSystem.getSysTasks()
+        return jsonify({"message": "Success", "tasks": [task.toDict() for task in tasks]})
+
+@app.route('/ai/fetchUser', methods=['POST'])
+def fetchUser():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        user = tempSystem.getUser(data.get('username'))
+        return jsonify({"message": "Success", "user": user.toDict()})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/fetchRole', methods=['POST'])
+def fetchRole():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        role = tempSystem.findRoleByTitle(data.get('roleName'))
+        return jsonify({"message": "Success", "role": role.toDict()})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/fetchGroup', methods=['POST'])
+def fetchGroup():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        group = tempSystem.findGroupByTitle(data.get('groupName'))
+        return jsonify({"message": "Success", "group": group.toDict()})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/fetchAPI', methods=['POST'])
+def fetchAPI():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        api = tempSystem.findAPIByName(data.get('apiName'))
+        return jsonify({"message": "Success", "api": api.toDict()})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/fetchTask', methods=['POST'])
+def fetchTask():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        task = tempSystem.findTaskByID(data.get('taskId'))
+        return jsonify({"message": "Success", "task": task.toDict()})   
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/createTask', methods=['POST'])
+def createTask():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        tempSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
+        assignees = data.get('assignees')
+        for assignee in assignees:
+            tempSystem.assignUserToTask(assignee, data.get('taskName'))
+        return jsonify({"message": "Success"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/updateTask', methods=['POST'])
+def updateTask():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        tempSystem.updateTask(data.get('taskId'), data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
+        return jsonify({"message": "Success"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/deleteTask', methods=['POST'])
+def deleteTask1():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        tempSystem.deleteTask(data.get('taskId'))
+        return jsonify({"message": "Success"})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/ai/closeTask', methods=['POST'])
+def closeTask1():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        tempSystem.closeTask(data.get('taskId'))
+        return jsonify({"message": "Success"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/ai/assignUsersToTask', methods=['POST'])
+def assignUsersToTask1():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == tempSystem.getAIAccessToken():
+        for assignee in data.get('assignees'):
+            tempSystem.assignUserToTask(assignee, data.get('taskName'))
+        return jsonify({"message": "Success"})
+    else:
+        return jsonify({"message": "Failed"})
+
+# Communication APIs go here
 @app.route('/api/homeCheck', methods=['GET'])
 def homeCheck():
     if tempSystem.getSetUpStatus():
@@ -46,8 +198,14 @@ def setupInstance():
     admin_password = data.get('adminPassword')
     contact_email = data.get('contactEmail')
     domain = data.get('domain')
-    tempSystem.setUpInstance(customerName=customer_name, adminPassword=admin_password, contactEmail=contact_email, domain=domain)
-    return jsonify({"message": "Instance is Setup"})
+    
+    # Validate required fields
+    if not all([customer_name, admin_password, contact_email, domain]):
+        return jsonify({"message": "Error", "error": "All fields (customerName, adminPassword, contactEmail, domain) are required"}), 400
+        
+    ai_access_token = str(uuid.uuid4())
+    tempSystem.setUpInstance(customerName=customer_name, adminPassword=admin_password, contactEmail=contact_email, domain=domain, aiAccessToken=ai_access_token)
+    return jsonify({"message": "Instance is Setup", "aiAccessToken": ai_access_token})
 
 @app.route('/api/loginUser', methods=['POST'])
 def loginUser():
