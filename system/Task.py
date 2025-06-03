@@ -67,3 +67,10 @@ class Task:
             "status": self.status,
             "previousTask": [task.toDict() for task in self.previousTask]
         }
+    
+    def __str__(self):
+        return f"Task ID: {self.taskId}, Title: {self.title}, Description: {self.description}, Creation Time: {self.creationTimeStamp}, Assigned Users: {self.assignedUsers}, Creator User: {self.creatorUser}, Status: {self.status}, Previous Task: {str([task.getTaskId() for task in self.previousTask])}"
+    
+    def __repr__(self):
+        return self.__str__()
+    

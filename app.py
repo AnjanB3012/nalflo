@@ -67,7 +67,7 @@ def getSystemAPIs():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == tempSystem.getAIAccessToken():
         apis = tempSystem.getSysAPIs()
-        return jsonify({"message": "Success", "apis": [api.toDict() for api in apis]})
+        return jsonify({"message": "Success", "apis": [{k: v for k, v in api.toDict().items() if k != "apiString"} for api in apis]})
     else:
         return jsonify({"message": "Failed"})
 
@@ -134,11 +134,11 @@ def createTask():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == tempSystem.getAIAccessToken():
-        tempSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
+        tempTask = tempSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
         assignees = data.get('assignees')
         for assignee in assignees:
-            tempSystem.assignUserToTask(assignee, data.get('taskName'))
-        return jsonify({"message": "Success"})
+            tempSystem.assignUserToTask(assignee, tempTask.getTaskId())
+        return jsonify({"message": "Success", "taskId": tempTask.getTaskId()})
     else:
         return jsonify({"message": "Failed"})
 
@@ -178,7 +178,7 @@ def assignUsersToTask1():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == tempSystem.getAIAccessToken():
         for assignee in data.get('assignees'):
-            tempSystem.assignUserToTask(assignee, data.get('taskName'))
+            tempSystem.assignUserToTask(assignee, data.get('taskID'))
         return jsonify({"message": "Success"})
     else:
         return jsonify({"message": "Failed"})

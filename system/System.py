@@ -7,6 +7,11 @@ import xml.etree.ElementTree as ET
 import system.Task as Task
 import json
 import datetime
+from TaskQueue import processTask
+import queue
+import threading
+import time
+
 
 
 def findUniqueTaskID(tasksList) -> int:
@@ -118,6 +123,9 @@ class System:
         else:
             self.setUpStatus = True
             self.loadInstance()
+            self.taskQueue = queue.Queue()
+            worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken), daemon=True)
+            worker_thread.start()
         
     def getSetUpStatus(self) -> bool:
         """
@@ -303,7 +311,7 @@ Required JSON:
 Required JSON:
 {
     "assignees": ["string (required)"] - List of usernames to assign,
-    "taskName": "string (required)"
+    "taskID": "integer (required)"
 }""",
                 "/ai/assignUsersToTask",
                 "None"
@@ -314,6 +322,10 @@ Required JSON:
         for api in system_apis:
             self.apis.append(api)
         self.saveInstance()
+        self.taskQueue = queue.Queue()
+        worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken), daemon=True)
+        worker_thread.start()
+
     def saveInstance(self):
         """
         Method to save the instance to an XML file
@@ -814,6 +826,8 @@ Required JSON:
         # Add task to assignees' task lists
         for user in assignedUsers:
             user.addTask(tempTask)
+        self.taskQueue.put(tempTask)
+        return tempTask
 
     def getTask(self, taskID: int) -> Task:
         """
@@ -895,21 +909,31 @@ Required JSON:
         else:
             print("API not found")
 
-    def assignUserToTask(self, username: str, taskTitle: str):
+    def assignUserToTask(self, username: str, taskID: int):
         """
         Assigns a user to a task
         Args:
             username (str): The username of the user
-            taskTitle (str): The title of the task  
+            taskID (int): The ID of the task
         """
         tempUser = findUserByUserName(username, self.users)
-        if tempUser:
-            tempTask = findTaskByID(taskTitle, self.tasks)
-            if tempTask:
-                tempTask.addUser(tempUser)
-                tempUser.addTask(tempTask)
-                return True
-        return False
+        if not tempUser:
+            print(f"Failed to assign task {taskID} to user {username}: User not found")
+            return False
+        
+        tempTask = findTaskByID(taskID, self.tasks)
+        if not tempTask:
+            print(f"Failed to assign task {taskID} to user {username}: Task not found")
+            return False
+        
+        try:
+            tempTask.assignUser(tempUser)
+            tempUser.addTask(tempTask)
+            print(f"Successfully assigned task {taskID} to user {username}")
+            return True
+        except Exception as e:
+            print(f"Error assigning task {taskID} to user {username}: {str(e)}")
+            return False
     
     def updateTask(self, taskID: int, taskTitle: str, taskDescription: str, taskStatus: bool):
         """
@@ -939,4 +963,3 @@ Required JSON:
             self.tasks.remove(tempTask)
             return True
         return False
-    
