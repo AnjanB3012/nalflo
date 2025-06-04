@@ -4,13 +4,14 @@ import system.Group as Group
 import system.User as User
 import system.API as API
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_login import LoginManager, login_user
 from uuid import uuid4
 from datetime import datetime, timezone
 from pyhold import pyhold
 import uuid
+import werkzeug
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
@@ -20,6 +21,13 @@ CORS(app, supports_credentials=True)
 cookies = pyhold("cookies.xml")
 
 thisSystem = System.System()
+
+# It should upload files to the root directory
+UPLOAD_FOLDER = "uploads"
+
+# Create uploads directory if it doesn't exist
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 def stringFunctionMaker(inputFunctionString):
     # Indent each line of the user-supplied function body
@@ -860,6 +868,68 @@ def removeBusinessRule():
             businessRule = data.get('businessRule')
             thisSystem.removeBusinessRule(businessRule)
             return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/uploadFile', methods=['POST'])
+def uploadFile():
+    data = request.form
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            if 'file' not in request.files:
+                return jsonify({"message": "No file part"})
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"message": "No selected file"})
+            if file:
+                filename = werkzeug.utils.secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_FOLDER, filename))
+                thisSystem.uploadFile(filename)
+                return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/getFiles', methods=['POST'])
+def getFiles():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            files = thisSystem.getFiles()
+            return jsonify({"message": "Success", "files": files})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/downloadFile/<filename>', methods=['GET'])
+def downloadFile(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+
+@app.route('/api/apis/removeFile', methods=['POST'])
+def removeFile():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            filename = data.get('filename')
+            try:
+                thisSystem.removeFile(filename)
+                os.remove(os.path.join(UPLOAD_FOLDER, filename))
+                return jsonify({"message": "Success"})
+            except Exception as e:
+                return jsonify({"message": str(e)})
         else:
             return jsonify({"message": "Permission Denied"})
     else:

@@ -7,3 +7,6 @@ system/__pycache__
 supervisord.log
 supervisord.pid
 pyhold.xml
+cookies.xml
+uploads/*
+uploads/

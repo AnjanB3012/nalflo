@@ -10,9 +10,12 @@ function API()
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const [apis, setAPIs] = useState([]);
+    const [files, setFiles] = useState([]);
+    const [uploadError, setUploadError] = useState("");
+    const [uploadSuccess, setUploadSuccess] = useState("");
     const navigate = useNavigate();
     useEffect(() => {
-        const fetchAPIs = async () => {
+        const fetchData = async () => {
             const cookieData = localStorage.getItem("local_cookie");
             if(!cookieData)
             {
@@ -47,10 +50,18 @@ function API()
                     {
                         setAPIs(allAPIsData.apis);
                     }
-                    else
-                    {
-                        setError(true);
-                        setErrorMessage("Failed to fetch APIs. Please try again later.");
+
+                    // Fetch files
+                    const filesResponse = await fetch("http://localhost:8080/api/apis/getFiles", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: cookieToken }),
+                    });
+                    const filesData = await filesResponse.json();
+                    if (filesData.message === "Success") {
+                        setFiles(filesData.files);
                     }
                 }
                 else
@@ -61,17 +72,119 @@ function API()
             }
             catch (error)
             {
-                console.error("Error fetching APIs:", error);
+                console.error("Error fetching data:", error);
                 setError(true);
-                setErrorMessage("Failed to fetch APIs. Please try again later.");
+                setErrorMessage("Failed to fetch data. Please try again later.");
             }
             finally
             {
                 setLoading(false);
             }
         }
-        fetchAPIs();
+        fetchData();
     }, []);
+
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const cookieData = localStorage.getItem("local_cookie");
+        if (!cookieData) {
+            setUploadError("No cookie found. Please log in.");
+            return;
+        }
+
+        const parsedCookie = JSON.parse(cookieData);
+        const cookieToken = parsedCookie.token;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('cookie_token', cookieToken);
+
+        try {
+            const response = await fetch("http://localhost:8080/api/apis/uploadFile", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setUploadSuccess("File uploaded successfully!");
+                setUploadError("");
+                // Refresh file list
+                const filesResponse = await fetch("http://localhost:8080/api/apis/getFiles", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const filesData = await filesResponse.json();
+                if (filesData.message === "Success") {
+                    setFiles(filesData.files);
+                }
+            } else {
+                setUploadError(data.message || "Failed to upload file");
+                setUploadSuccess("");
+            }
+        } catch (error) {
+            console.error("Error uploading file:", error);
+            setUploadError("Failed to upload file");
+            setUploadSuccess("");
+        }
+    };
+
+    const handleDownload = (filename) => {
+        window.open(`http://localhost:8080/api/apis/downloadFile/${filename}`, '_blank');
+    };
+
+    const handleDelete = async (filename) => {
+        const cookieData = localStorage.getItem("local_cookie");
+        if (!cookieData) {
+            setUploadError("No cookie found. Please log in.");
+            return;
+        }
+
+        const parsedCookie = JSON.parse(cookieData);
+        const cookieToken = parsedCookie.token;
+
+        try {
+            const response = await fetch("http://localhost:8080/api/apis/removeFile", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken,
+                    filename: filename
+                }),
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setUploadSuccess("File deleted successfully!");
+                setUploadError("");
+                // Refresh file list
+                const filesResponse = await fetch("http://localhost:8080/api/apis/getFiles", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const filesData = await filesResponse.json();
+                if (filesData.message === "Success") {
+                    setFiles(filesData.files);
+                }
+            } else {
+                setUploadError(data.message || "Failed to delete file");
+                setUploadSuccess("");
+            }
+        } catch (error) {
+            console.error("Error deleting file:", error);
+            setUploadError("Failed to delete file");
+            setUploadSuccess("");
+        }
+    };
+
     if (error) {
         return (
             <div className="iam-container">
@@ -136,6 +249,60 @@ function API()
                                     <td>{api.apiDescription}</td>
                                     <td>{api.apiEndpoint}</td>
                                     <td><button className="button button-success" onClick={() => navigate(`/viewAPI/${api.apiName}`)}>View</button></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Files</h2>
+                        <div className="file-upload">
+                            <input
+                                type="file"
+                                id="file-upload"
+                                onChange={handleFileUpload}
+                                style={{ display: 'none' }}
+                            />
+                            <label htmlFor="file-upload" className="button button-primary">
+                                Upload File
+                            </label>
+                        </div>
+                    </div>
+                    {uploadError && <p className="error-message">{uploadError}</p>}
+                    {uploadSuccess && <p className="success-message">{uploadSuccess}</p>}
+                    <table className="api-table">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Size</th>
+                                <th>Last Modified</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {files.map((file) => (
+                                <tr key={file.name}>
+                                    <td>{file.name}</td>
+                                    <td>{(file.size / 1024).toFixed(2)} KB</td>
+                                    <td>{file.modified}</td>
+                                    <td>
+                                        <div className="button-group">
+                                            <button 
+                                                className="button button-success"
+                                                onClick={() => handleDownload(file.name)}
+                                            >
+                                                Download
+                                            </button>
+                                            <button 
+                                                className="button button-danger"
+                                                onClick={() => handleDelete(file.name)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

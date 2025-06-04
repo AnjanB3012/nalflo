@@ -3,6 +3,7 @@ import system.Group as Group
 import system.Role as Role
 import system.User as User
 import system.API as API
+import system.File as File
 import xml.etree.ElementTree as ET
 import system.Task as Task
 import json
@@ -169,6 +170,7 @@ class System:
         self.groups.append(tempGroup)
         self.setUpStatus = True
         self.aiAccessToken = aiAccessToken
+        self.sysFiles = []
         system_apis = [
             API.API(
                 "Get System Users",
@@ -360,6 +362,12 @@ Required JSON:
             for groupuser in group_users:
                 group_user_tab = ET.SubElement(users_tab,"username")
                 group_user_tab.text = groupuser.getUserName()
+        files_save = ET.SubElement(root, "Files")
+        for file in self.sysFiles:
+            file_tab = ET.SubElement(files_save, "File")
+            file_tab.set("name", file.name)
+            file_tab.set("size", str(file.size))
+            file_tab.set("modified", file.modified.strftime('%Y-%m-%d %H:%M:%S'))
         users_save = ET.SubElement(root, "Users")
         for userVal in self.users:
             user_tab = ET.SubElement(users_save, "User")
@@ -479,6 +487,14 @@ Required JSON:
                 thisUserObj.addToGroup(findGroupByName(temp_User_Group_Loop.text,self.groups))
         self.permissions = json.loads(root.find("Permissions").text)
         self.tasks = []
+        self.sysFiles = []
+        for tempFile_loop in root.find("Files").findall("File"):
+            file = File.File(
+                name=tempFile_loop.get("name"),
+                size=int(tempFile_loop.get("size")),
+                modified=datetime.datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
+            )
+            self.sysFiles.append(file)
         for tempTask_loop in root.find("Tasks").findall("Task"):
             usersAssigned = []
             for usname in tempTask_loop.find("UsersAssigned").findall("Username"):
@@ -996,3 +1012,34 @@ Required JSON:
         """
         if businessRule in self.businessRules:
             self.businessRules.remove(businessRule)
+    
+    def uploadFile(self, fileName: str):
+        """
+        Uploads a file to the system
+        Args:
+            fileName (str): The name of the file to upload
+        """
+        file_path = os.path.join("uploads", fileName)
+        if os.path.exists(file_path):
+            file = File.File(fileName)
+            file.updateFileInfo(file_path)
+            self.sysFiles.append(file)
+
+    def getFiles(self) -> list:
+        """
+        Gets the files in the system
+        Returns:
+            list: The list of files in the system with their details
+        """
+        return [file.toDict() for file in self.sysFiles]
+
+    def removeFile(self, fileName: str):
+        """
+        Removes a file from the system
+        Args:
+            fileName (str): The name of the file to remove
+        """
+        for file in self.sysFiles:
+            if file.name == fileName:
+                self.sysFiles.remove(file)
+                break
