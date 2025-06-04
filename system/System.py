@@ -124,7 +124,7 @@ class System:
             self.setUpStatus = True
             self.loadInstance()
             self.taskQueue = queue.Queue()
-            worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken), daemon=True)
+            worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
             worker_thread.start()
         
     def getSetUpStatus(self) -> bool:
@@ -152,12 +152,13 @@ class System:
         self.users = []
         self.tasks = []
         self.apis = []
-        self.permissions = ["home","iam","AssignToAll", "development"]
+        self.permissions = ["home","iam","AssignToAll", "development", "management"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
             "iam": True,
             "AssignToAll": True,
-            "development": True
+            "development": True,
+            "management": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
         tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
@@ -318,12 +319,13 @@ Required JSON:
             )
         ]
 
-        # Add all system APIs to the instance
+        # Add all system APIs to the instance f
         for api in system_apis:
             self.apis.append(api)
+        self.businessRules = [] # String of business rules
         self.saveInstance()
         self.taskQueue = queue.Queue()
-        worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken), daemon=True)
+        worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
         worker_thread.start()
 
     def saveInstance(self):
@@ -417,6 +419,8 @@ Required JSON:
             api_tab.set("Description", apiVal.getApiDescription())
             api_tab.set("Endpoint", apiVal.getApiEndpoint())
             api_tab.set("String", apiVal.getApiString())
+        businessRules_save = ET.SubElement(root, "BusinessRules")
+        businessRules_save.text = ','.join(self.businessRules)
         tree = ET.ElementTree(root)
         with open(xml_filename, "wb") as file:
             tree.write(file, encoding="utf-8", xml_declaration=True)
@@ -438,6 +442,9 @@ Required JSON:
         self.users = []
         self.aiAccessToken = root.find("aiAccessToken").text
         self.apis = []
+        # Initialize businessRules as a list and parse the XML text into a list
+        business_rules_text = root.find("BusinessRules").text
+        self.businessRules = business_rules_text.split(',') if business_rules_text else []
         for tempRole_loop in root.find("Roles").findall("Role"):
             tempRole = Role.Role(
                 roleTitle=tempRole_loop.get("Title"),
@@ -963,3 +970,29 @@ Required JSON:
             self.tasks.remove(tempTask)
             return True
         return False
+
+    def getBusinessRules(self) -> list:
+        """
+        Gets the business rules
+        Returns:
+            list: The list of business rules
+        """
+        return self.businessRules
+
+    def addBusinessRule(self, businessRule: str):
+        """
+        Adds a business rule to the system
+        Args:
+            businessRule (str): The business rule to add
+        """
+        if businessRule not in self.businessRules:
+            self.businessRules.append(businessRule)
+
+    def removeBusinessRule(self, businessRule: str):
+        """
+        Removes a business rule from the system
+        Args:
+            businessRule (str): The business rule to remove
+        """
+        if businessRule in self.businessRules:
+            self.businessRules.remove(businessRule)

@@ -75,7 +75,12 @@ function API()
     if (error) {
         return (
             <div className="iam-container">
-                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
+                <Navbar 
+                    HomePermission={permissions?.home} 
+                    IAMPermission={permissions?.iam} 
+                    apisPermission={permissions?.development}
+                    managementPermission={permissions?.management}
+                />
                 <div className="error-message">
                     <h2>Something went wrong</h2>
                     <p>{errorMessage}</p>
@@ -87,7 +92,12 @@ function API()
     if (loading) {
         return (
             <div className="iam-container">
-                <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
+                <Navbar 
+                    HomePermission={permissions?.home} 
+                    IAMPermission={permissions?.iam} 
+                    apisPermission={permissions?.development}
+                    managementPermission={permissions?.management}
+                />
                 <div className="loading-message">
                     <h2>Loading...</h2>
                 </div>
@@ -97,7 +107,12 @@ function API()
 
     return (
         <div className="api-container">
-            <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
+            <Navbar 
+                HomePermission={permissions?.home} 
+                IAMPermission={permissions?.iam} 
+                apisPermission={permissions?.development}
+                managementPermission={permissions?.management}
+            />
             <h1 className="api-title">API Engine</h1>
             <div className="card-container">
                 <div className="card">

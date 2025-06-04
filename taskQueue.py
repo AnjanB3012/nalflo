@@ -6,8 +6,8 @@ import json
 from dotenv import load_dotenv
 import requests
 
-def processTask(taskQueue, aiAccessToken):
-    def perform_ai_call(prompt, aiAccessToken_token):
+def processTask(taskQueue, aiAccessToken, businessRules):
+    def perform_ai_call(prompt, aiAccessToken_token, businessRules_param):
         load_dotenv()
         dict_response = {
             "API_Call_Needed": False,
@@ -16,7 +16,9 @@ def processTask(taskQueue, aiAccessToken):
             "Need_To_Make_Another_Call": True,
         }
         next_prompt = prompt
-        # Initialize conversation history
+        if businessRules_param is []:
+            businessRules_param = "None for now."
+        print(businessRules_param)
         conversation_history = [
             types.Content(
                 role="user",
@@ -168,7 +170,7 @@ Business Rules:
 Follow any specific business rules provided below while performing tasks.
 
 Business Rules:
-None for now."""),
+{businessRules_param}"""),
                     ],
                 )
                 output = ""
@@ -218,7 +220,7 @@ None for now."""),
         if not taskQueue.empty():
             task = taskQueue.get()
             try:
-                perform_ai_call(str(task), aiAccessToken)
+                perform_ai_call(str(task), aiAccessToken, businessRules)
             except Exception as e:
                 print(f"Error processing task: {e}")
             finally:

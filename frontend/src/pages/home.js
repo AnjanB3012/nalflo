@@ -137,7 +137,12 @@ function Home() {
 
     return (
         <div className="home-container">
-            <Navbar HomePermission={permissions?.home} IAMPermission={permissions?.iam} apisPermission={permissions?.development} />
+            <Navbar 
+                HomePermission={permissions?.home} 
+                IAMPermission={permissions?.iam} 
+                apisPermission={permissions?.development}
+                managementPermission={permissions?.management}
+            />
             <div className="main-content">
                 <div className="filters-container">
                     <div className="search-container">
