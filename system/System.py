@@ -502,24 +502,64 @@ Required JSON:
                 modified=datetime.datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
             )
             self.sysFiles.append(file)
+
+        # First pass: Create all tasks without previous task relationships
+        task_map = {}  # Map to store tasks by ID for second pass
         for tempTask_loop in root.find("Tasks").findall("Task"):
+            # Get assigned users
             usersAssigned = []
             for usname in tempTask_loop.find("UsersAssigned").findall("Username"):
-                usersAssigned.append(findUserByUserName(usname.text,self.users))
-            previousTasks = []
-            for taskID in tempTask_loop.find("PreviousTasks").findall("TaskID"):
-                previousTasks.append(findTaskByID(int(taskID.text),self.tasks))
+                user = findUserByUserName(usname.text, self.users)
+                if user:
+                    usersAssigned.append(user)
+                else:
+                    print(f"Warning: User {usname.text} not found when loading task assignments")
+
+            # Get creator user
+            creator_username = tempTask_loop.find("CreatorUser").text
+            creator_user = findUserByUserName(creator_username, self.users)
+            if not creator_user:
+                print(f"Warning: Creator user {creator_username} not found when loading task")
+                continue
+
+            # Create task
             tempTask = Task.Task(
                 taskId=int(tempTask_loop.get("TaskID")),
                 titleName=tempTask_loop.find("Title").text,
                 description=tempTask_loop.find("Description").text,
                 creationTimeStamp=datetime.datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
                 assignedUsers=usersAssigned,
-                creatorUser=findUserByUserName(tempTask_loop.find("CreatorUser").text,self.users),
+                creatorUser=creator_user,
                 status=bool(tempTask_loop.find("Status").text),
-                previousTask=previousTasks
+                previousTask=[]  # Will be populated in second pass
             )
+            
+            # Store task in map and system
+            task_map[tempTask.getTaskId()] = tempTask
             self.tasks.append(tempTask)
+            
+            # Add task to users' task lists
+            for user in usersAssigned:
+                user.addTask(tempTask)
+            creator_user.addTask(tempTask)
+
+        # Second pass: Set up previous task relationships
+        for tempTask_loop in root.find("Tasks").findall("Task"):
+            task_id = int(tempTask_loop.get("TaskID"))
+            task = task_map.get(task_id)
+            if not task:
+                continue
+                
+            previousTasks = []
+            for taskID in tempTask_loop.find("PreviousTasks").findall("TaskID"):
+                prev_task_id = int(taskID.text)
+                prev_task = task_map.get(prev_task_id)
+                if prev_task:
+                    previousTasks.append(prev_task)
+                else:
+                    print(f"Warning: Previous task {prev_task_id} not found when loading task {task_id}")
+            task.previousTask = previousTasks
+
         for tempAPI_loop in root.find("APIs").findall("API"):
             tempAPI = API.API(
                 apiName=tempAPI_loop.get("Name"),
@@ -578,17 +618,35 @@ Required JSON:
             for tempGroup in tempUser.getGroups():
                 tempGroup.removeUser(tempUser)
     
-    def assignTaskToUser(self,username:str, taskTitle:str, taskDescription:str):
+    def assignTaskToUser(self, username: str, taskID: int):
         """
         Method to assign a task to a user
         Args:
             username (str): The username of the user
-            taskTitle (str): The title of the task
-            taskDescription (str): The description of the task
+            taskID (int): The ID of the task to assign
+        Returns:
+            bool: True if task was assigned successfully, False otherwise
         """
-        tempUser = findUserByUserName(username,self.users)
-        if tempUser:
-            tempUser.addTask(taskTitle,taskDescription)
+        tempUser = findUserByUserName(username, self.users)
+        if not tempUser:
+            print(f"Failed to assign task {taskID} to user {username}: User not found")
+            return False
+            
+        tempTask = findTaskByID(taskID, self.tasks)
+        if not tempTask:
+            print(f"Failed to assign task {taskID} to user {username}: Task not found")
+            return False
+            
+        # Check if user is already assigned
+        if tempUser in tempTask.getAssignedUsers():
+            print(f"User {username} is already assigned to task {taskID}")
+            return True
+            
+        # Assign task to user
+        tempTask.assignUser(tempUser)
+        tempUser.addTask(tempTask)
+        print(f"Successfully assigned task {taskID} to user {username}")
+        return True
     
     def closeTask(self, taskID: int):
         """
@@ -946,32 +1004,6 @@ Required JSON:
         else:
             print("API not found")
 
-    def assignUserToTask(self, username: str, taskID: int):
-        """
-        Assigns a user to a task
-        Args:
-            username (str): The username of the user
-            taskID (int): The ID of the task
-        """
-        tempUser = findUserByUserName(username, self.users)
-        if not tempUser:
-            print(f"Failed to assign task {taskID} to user {username}: User not found")
-            return False
-        
-        tempTask = findTaskByID(taskID, self.tasks)
-        if not tempTask:
-            print(f"Failed to assign task {taskID} to user {username}: Task not found")
-            return False
-        
-        try:
-            tempTask.assignUser(tempUser)
-            tempUser.addTask(tempTask)
-            print(f"Successfully assigned task {taskID} to user {username}")
-            return True
-        except Exception as e:
-            print(f"Error assigning task {taskID} to user {username}: {str(e)}")
-            return False
-    
     def updateTask(self, taskID: int, taskTitle: str, taskDescription: str, taskStatus: bool):
         """
         Updates a task
@@ -1109,3 +1141,13 @@ Required JSON:
             tempThreadAPI.setThreadString(threadAPIString)
         else:
             print("Thread API not found")
+
+    def findUserByUserName(self, username: str) -> User:
+        """
+        Finds a user by their username
+        Args:
+            username (str): The username of the user
+        Returns:
+            User: The user with the given username, None if not found
+        """
+        return findUserByUserName(username, self.users)

@@ -94,7 +94,6 @@ start_all_threads()
 
 
 
-
 # AI Access System APIs go here
 @app.route('/ai/getSystemUsers', methods=['POST'])
 def getSystemUsers():
@@ -241,7 +240,7 @@ def assignUsersToTask1():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         for assignee in data.get('assignees'):
-            thisSystem.assignUserToTask(assignee, data.get('taskID'))
+            thisSystem.assignTaskToUser(assignee, data.get('taskID'))
         return jsonify({"message": "Success"})
     else:
         return jsonify({"message": "Failed"})
@@ -1039,7 +1038,7 @@ def modifyAPI():
             
             # Find the API endpoint in the file
             endpoint = api.getApiEndpoint()
-            start_marker = f"@app.route('/{endpoint}'"
+            start_marker = f"@app.route('{endpoint}', methods=['GET', 'POST'])"
             end_marker = "\n\n"
             
             # Split the content to find the API definition
@@ -1051,7 +1050,7 @@ def modifyAPI():
                 # Create new API definition with updated string
                 functionStr = stringFunctionMaker(new_api_string)
                 new_endpoint = (
-                    f"@app.route('/{endpoint}', methods=['GET', 'POST'])\n"
+                    f"@app.route('{endpoint}', methods=['GET', 'POST'])\n"
                     f"def {endpoint}():\n"
                     f"    {functionStr}\n"
                 )
@@ -1092,7 +1091,7 @@ def deleteAPI():
             
             # Find the API endpoint in the file
             endpoint = api.getApiEndpoint()
-            start_marker = f"@app.route('/{endpoint}'"
+            start_marker = f"@app.route('{endpoint}', methods=['GET', 'POST'])"
             end_marker = "\n\n"
             
             # Split the content to find the API definition

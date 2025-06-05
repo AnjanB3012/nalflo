@@ -17,6 +17,13 @@ function ViewAPI() {
     const [editedApiString, setEditedApiString] = useState("");
     const navigate = useNavigate();
 
+    // Function to format API string for display
+    const formatApiString = (apiString) => {
+        if (!apiString) return "";
+        // Split by <break> and join with newlines, preserving indentation
+        return apiString.split("<break>").join("\n");
+    };
+
     useEffect(() => {
         try {
             const parsedCookie = JSON.parse(localStorage.getItem("local_cookie"));
@@ -51,7 +58,7 @@ function ViewAPI() {
         .then((data) => {
             if (data.message === "Success") {
                 setApi(data.api);
-                setEditedApiString(data.api.apiString);
+                setEditedApiString(formatApiString(data.api.apiString));
             } else {
                 setError(true);
                 setErrorMessage(data.message);
@@ -85,6 +92,9 @@ function ViewAPI() {
         setStatusMessage("Saving changes...");
 
         try {
+            // Format the edited code back to the expected format with <break> markers
+            const formattedApiString = editedApiString.split('\n').join('<break>');
+
             const response = await fetch("http://localhost:8080/api/apis/modifyAPI", {
                 method: "POST",
                 headers: {
@@ -93,7 +103,7 @@ function ViewAPI() {
                 body: JSON.stringify({
                     cookie_token: cookieToken,
                     api_name: apiName,
-                    new_api_string: editedApiString,
+                    new_api_string: formattedApiString,
                 }),
             });
 
@@ -255,7 +265,7 @@ function ViewAPI() {
                         <Editor
                             height="250px"
                             defaultLanguage="python"
-                            value={api.apiString}
+                            value={formatApiString(api.apiString)}
                             theme="light"
                             options={{ readOnly: true }}
                         />
