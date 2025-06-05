@@ -1,5 +1,5 @@
-import { use, useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar";
 import "../styles/apis.css";
 
@@ -20,7 +20,7 @@ function API()
             const cookieData = localStorage.getItem("local_cookie");
             if(!cookieData)
             {
-                Navigate('/login');
+                navigate('/login');
                 return;
             }
             const parsedCookie = JSON.parse(cookieData);
