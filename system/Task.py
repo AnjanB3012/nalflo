@@ -3,7 +3,7 @@ import system.User as User
 import system.Task as Task
 
 class Task:
-    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, assignedUsers: list[User], creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
+    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, assignedUsers, creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
         self.taskId = taskId
         self.title = titleName
         self.description = description
@@ -35,7 +35,7 @@ class Task:
     def getCreationTimeStamp(self) -> datetime:
         return self.creationTimeStamp
 
-    def getAssignedUsers(self) -> list[User]:
+    def getAssignedUsers(self):
         return self.assignedUsers
     
     def getCreatorUser(self) -> User:
@@ -67,3 +67,10 @@ class Task:
             "status": self.status,
             "previousTask": [task.toDict() for task in self.previousTask]
         }
+    
+    def __str__(self):
+        return f"Task ID: {self.taskId}, Title: {self.title}, Description: {self.description}, Creation Time: {self.creationTimeStamp}, Assigned Users: {self.assignedUsers}, Creator User: {self.creatorUser}, Status: {self.status}, Previous Task: {str([task.getTaskId() for task in self.previousTask])}"
+    
+    def __repr__(self):
+        return self.__str__()
+    

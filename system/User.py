@@ -20,7 +20,7 @@ class User:
         addToGroup(newGroup:Group): Adds the user to a group
         __str__() -> str: Returns the username, role, and groups of the user
     """
-    def __init__(self, userName: str, password: str, roleinfo: Role, groups: list[Group]=[], tasks: list[Task]=[], name: str=""):
+    def __init__(self, userName: str, password: str, roleinfo: Role, groups=[], tasks=[], name: str=""):
         """
         Initializes the User object
         Args:
@@ -98,7 +98,7 @@ class User:
                 pass  # User wasn't in the old role's list
         self.roleInfo = newRole
     
-    def getGroups(self) -> list[Group]:
+    def getGroups(self):
         """
         Getter for the groups the user is in
         Returns:
@@ -114,7 +114,7 @@ class User:
         """
         self.groups.append(newGroup)
 
-    def getTasks(self) -> list[Task]:
+    def getTasks(self):
         """
         Gets all tasks assigned to the user
         Returns:

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/navbar';
 import '../styles/createNewTask.css';
 
@@ -10,8 +10,18 @@ function CreateNewTask() {
     const [assignableUsers, setAssignableUsers] = useState([]);
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [error, setError] = useState('');
+    const [previousTask, setPreviousTask] = useState(null);
+    const location = useLocation();
 
     useEffect(() => {
+        // Check if we're replying to a task
+        if (location.state?.previousTask) {
+            setPreviousTask(location.state.previousTask);
+            setTitle(`Re: ${location.state.previousTask.title}`);
+            // Initialize selected users with current task's assignees
+            setSelectedUsers(location.state.previousTask.assignedUsers.map(user => user.userName));
+        }
+
         const fetchAssignableUsers = async () => {
             const cookieData = localStorage.getItem("local_cookie");
             if (!cookieData) {
@@ -43,7 +53,7 @@ function CreateNewTask() {
         };
 
         fetchAssignableUsers();
-    }, [navigate]);
+    }, [navigate, location]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -73,7 +83,8 @@ function CreateNewTask() {
                     cookie_token: cookieToken,
                     task_title: title,
                     task_description: description,
-                    task_assignees: selectedUsers
+                    task_assignees: selectedUsers,
+                    previous_task_id: previousTask?.taskId
                 }),
             });
             const data = await response.json();
@@ -92,15 +103,14 @@ function CreateNewTask() {
         <div className="create-task-container">
             <Navbar />
             <div className="main-content">
-                <div className="content-card">
-                    <h1>Create New Task</h1>
+                <div className="create-task-card">
+                    <h2>{previousTask ? 'Reply to Task' : 'Create New Task'}</h2>
                     {error && <div className="error-message">{error}</div>}
-                    <form onSubmit={handleSubmit} className="task-form">
+                    <form onSubmit={handleSubmit}>
                         <div className="form-group">
-                            <label htmlFor="title">Task Title</label>
+                            <label>Title</label>
                             <input
                                 type="text"
-                                id="title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="Enter task title"
@@ -108,35 +118,76 @@ function CreateNewTask() {
                             />
                         </div>
                         <div className="form-group">
-                            <label htmlFor="description">Task Description</label>
+                            <label>Description</label>
                             <textarea
-                                id="description"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Enter task description"
+                                required
                                 rows="4"
                             />
                         </div>
                         <div className="form-group">
                             <label>Assign Users</label>
                             <div className="users-list">
-                                {assignableUsers.map(user => (
-                                    <div key={user.userName} className="user-checkbox">
+                                {/* Show creator first if replying */}
+                                {previousTask && (
+                                    <div key={previousTask.creatorUser.userName} className="user-checkbox" style={{ opacity: '0.7' }}>
                                         <input
                                             type="checkbox"
-                                            id={user.userName}
-                                            checked={selectedUsers.includes(user.userName)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedUsers([...selectedUsers, user.userName]);
-                                                } else {
-                                                    setSelectedUsers(selectedUsers.filter(u => u !== user.userName));
-                                                }
-                                            }}
+                                            id={previousTask.creatorUser.userName}
+                                            checked={true}
+                                            disabled={true}
                                         />
-                                        <label htmlFor={user.userName}>{user.name}</label>
+                                        <label htmlFor={previousTask.creatorUser.userName}>
+                                            {previousTask.creatorUser.userName} (Creator)
+                                        </label>
                                     </div>
-                                ))}
+                                )}
+                                {/* Show current assignees if replying (excluding creator) */}
+                                {previousTask && previousTask.assignedUsers.map(user => {
+                                    if (user.userName !== previousTask.creatorUser.userName) {
+                                        return (
+                                            <div key={user.userName} className="user-checkbox" style={{ opacity: '0.7' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    id={user.userName}
+                                                    checked={true}
+                                                    disabled={true}
+                                                />
+                                                <label htmlFor={user.userName}>{user.name} (Current Assignee)</label>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                                {/* Show assignable users */}
+                                {assignableUsers.map(user => {
+                                    const isCurrentAssignee = previousTask?.assignedUsers.some(
+                                        assignedUser => assignedUser.userName === user.userName
+                                    );
+                                    const isCreator = previousTask?.creatorUser.userName === user.userName;
+                                    if (!isCurrentAssignee && !isCreator) {
+                                        return (
+                                            <div key={user.userName} className="user-checkbox">
+                                                <input
+                                                    type="checkbox"
+                                                    id={user.userName}
+                                                    checked={selectedUsers.includes(user.userName)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedUsers([...selectedUsers, user.userName]);
+                                                        } else {
+                                                            setSelectedUsers(selectedUsers.filter(u => u !== user.userName));
+                                                        }
+                                                    }}
+                                                />
+                                                <label htmlFor={user.userName}>{user.name}</label>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })}
                             </div>
                         </div>
                         <div className="form-actions">
@@ -144,7 +195,7 @@ function CreateNewTask() {
                                 Cancel
                             </button>
                             <button type="submit" className="submit-button">
-                                Create Task
+                                {previousTask ? 'Submit Reply' : 'Create Task'}
                             </button>
                         </div>
                     </form>

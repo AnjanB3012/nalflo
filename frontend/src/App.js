@@ -13,6 +13,12 @@ import ViewGroup from './pages/viewGroup';
 import CreateGroup from './pages/createGroup';
 import CreateNewTask from './pages/createNewTask';
 import TaskView from './pages/TaskView';
+import API from './pages/apis';
+import CreateNewAPI from './pages/createNewAPI';
+import Management from './pages/management';
+import ViewAPI from './pages/viewAPI';
+import ViewThread from './pages/viewThread';
+import CreateNewThread from './pages/createNewThread';
 
 function App() {
   return (
@@ -28,9 +34,15 @@ function App() {
         <Route path="/createNewRole" element={<CreateNewRole />} />
         <Route path="/viewRole/:roleTitle" element={<ViewRole />} />
         <Route path="/viewGroup/:groupTitle" element={<ViewGroup />} />
+        <Route path="/viewAPI/:apiName" element={<ViewAPI />} />
+        <Route path="/viewThread/:threadName" element={<ViewThread />} />
         <Route path="/createNewGroup" element={<CreateGroup />} />
         <Route path="/createNewTask" element={<CreateNewTask />} />
         <Route path="/task/:taskId" element={<TaskView />} />
+        <Route path="/apiengine" element={<API />} />
+        <Route path="/createNewAPI" element={<CreateNewAPI />} />
+        <Route path="/createNewThread" element={<CreateNewThread />} />
+        <Route path="/management" element={<Management />} />
       </Routes>
     </Router>
   );

@@ -2,3 +2,11 @@ roles.txt
 frontend-legacy
 .env
 instance.xml
+__pycache__
+system/__pycache__
+supervisord.log
+supervisord.pid
+pyhold.xml
+cookies.xml
+uploads/*
+uploads/

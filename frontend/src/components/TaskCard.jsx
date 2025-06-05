@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/TaskCard.css';
 
 function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
+    const navigate = useNavigate();
     const [showAssignUsers, setShowAssignUsers] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [assignableUsers, setAssignableUsers] = useState([]);
@@ -13,6 +15,10 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
 
     const getStatusClass = (status) => {
         return status ? 'open' : 'closed';
+    };
+
+    const handleTaskClick = () => {
+        navigate(`/task/${task.taskId}`);
     };
 
     const handleAssignUsers = async () => {
@@ -79,7 +85,7 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
     };
 
     return (
-        <div className="task-card">
+        <div className="task-card" onClick={handleTaskClick} style={{ cursor: 'pointer' }}>
             {error && <div className="error-message">{error}</div>}
             <div className="task-header">
                 <h3>{task.title}</h3>
@@ -93,26 +99,26 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
                 <p><strong>Created on:</strong> {new Date(task.creationTimeStamp).toLocaleString()}</p>
                 <p><strong>Assigned to:</strong> {task.assignedUsers?.map(user => user.userName).join(', ') || 'None'}</p>
             </div>
-            <div className="task-actions">
-                {task.creatorUser?.userName === currentUser && (
-                    <button className="delete-button" onClick={() => onDelete(task.taskId)}>
-                        Delete Task
-                    </button>
-                )}
+            <div className="task-actions" onClick={(e) => e.stopPropagation()}>
                 {task.status && (
                     <>
-                        <button className="close-button" onClick={() => onClose(task.taskId)}>
-                            Close Task
-                        </button>
-                        <button className="assign-button" onClick={handleAssignUsers}>
-                            Assign Users
-                        </button>
+                        {(task.creatorUser?.userName === currentUser || 
+                          task.assignedUsers?.some(user => user.userName === currentUser)) && (
+                            <button className="close-button" onClick={() => onClose(task.taskId)}>
+                                Close Task
+                            </button>
+                        )}
+                        {task.creatorUser?.userName === currentUser && (
+                            <button className="assign-button" onClick={handleAssignUsers}>
+                                Assign Users
+                            </button>
+                        )}
                     </>
                 )}
             </div>
 
             {showAssignUsers && (
-                <div className="assign-users-modal">
+                <div className="assign-users-modal" onClick={(e) => e.stopPropagation()}>
                     <div className="assign-users-content">
                         <h3>Assign Users to Task</h3>
                         <div className="users-list">

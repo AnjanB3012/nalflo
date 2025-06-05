@@ -2,13 +2,21 @@ import os
 import system.Group as Group
 import system.Role as Role
 import system.User as User
+import system.API as API
+import system.File as File
+import system.ThreadAPI as ThreadAPI
 import xml.etree.ElementTree as ET
 import system.Task as Task
 import json
 import datetime
+from TaskQueue import processTask
+import queue
+import threading
+import time
 
 
-def findUniqueTaskID(tasksList: list[Task]) -> int:
+
+def findUniqueTaskID(tasksList) -> int:
     """
     Helper function to find a unique task ID
     Args:
@@ -22,7 +30,7 @@ def findUniqueTaskID(tasksList: list[Task]) -> int:
             maxId = tempTask.taskId
     return maxId+1
 
-def findTaskByID(taskID: int, tasksList: list[Task]) -> Task:
+def findTaskByID(taskID: int, tasksList) -> Task:
     """
     Helper function to find a task by its ID
     Args:
@@ -36,7 +44,7 @@ def findTaskByID(taskID: int, tasksList: list[Task]) -> Task:
             return tempTaskVal
     return None
 
-def findRoleByTitle(inputTitle: str, rolesList: list[Role]) -> Role:
+def findRoleByTitle(inputTitle: str, rolesList) -> Role:
     """
     Helper function to find a role by its title
     Args:
@@ -50,7 +58,7 @@ def findRoleByTitle(inputTitle: str, rolesList: list[Role]) -> Role:
             return tempRoleVal1
     return None
     
-def findUserByUserName(inputUserName: str, usersList: list[User]) -> User:
+def findUserByUserName(inputUserName: str, usersList) -> User:
     """
     Helper function to find a user by its username
     Args:
@@ -64,7 +72,7 @@ def findUserByUserName(inputUserName: str, usersList: list[User]) -> User:
             return tempUserVal1
     return None
 
-def findGroupByName(inputName: str, groupsList: list[Group]) -> Group:
+def findGroupByName(inputName: str, groupsList) -> Group:
     """
     Helper function to find a group by its name
     Args:
@@ -76,6 +84,20 @@ def findGroupByName(inputName: str, groupsList: list[Group]) -> Group:
     for tempGroupVal1 in groupsList:
         if(tempGroupVal1.getDetails()[0]==inputName):
             return tempGroupVal1
+    return None
+
+def findAPIbyName(inputName: str, apisList) -> API:
+    """
+    Helper function to find an API by its name
+    Args:
+        inputName (str): The name of the API
+        apisList (list[API]): The list of APIs to search
+    Returns:
+        API: The API with the name, None if not found
+    """
+    for tempAPIVal1 in apisList:
+        if(tempAPIVal1.getApiName()==inputName):
+            return tempAPIVal1
     return None
 
 class System:
@@ -103,6 +125,9 @@ class System:
         else:
             self.setUpStatus = True
             self.loadInstance()
+            self.taskQueue = queue.Queue()
+            worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
+            worker_thread.start()
         
     def getSetUpStatus(self) -> bool:
         """
@@ -112,7 +137,7 @@ class System:
         """
         return self.setUpStatus
 
-    def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str):
+    def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str, aiAccessToken: str):
         """
         Method to set up the instance
         Args:
@@ -128,11 +153,15 @@ class System:
         self.roles = []
         self.users = []
         self.tasks = []
-        self.permissions = ["home","iam","AssignToAll"]
+        self.apis = []
+        self.threadAPIs = []
+        self.permissions = ["home","iam","AssignToAll", "development", "management"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
             "iam": True,
-            "AssignToAll": True
+            "AssignToAll": True,
+            "development": True,
+            "management": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
         tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
@@ -142,8 +171,167 @@ class System:
         self.roles.append(tempRole)
         self.groups.append(tempGroup)
         self.setUpStatus = True
+        self.aiAccessToken = aiAccessToken
+        self.sysFiles = []
+        system_apis = [
+            API.API(
+                "Get System Users",
+                """Retrieves all users in the system. Returns a list of user objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemUsers",
+                "None"
+            ),
+            API.API(
+                "Get System Roles",
+                """Retrieves all roles in the system. Returns a list of role objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemRoles",
+                "None"
+            ),
+            API.API(
+                "Get System Groups",
+                """Retrieves all groups in the system. Returns a list of group objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemGroups",
+                "None"
+            ),
+            API.API(
+                "Get System APIs",
+                """Retrieves all APIs in the system. Returns a list of API objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemAPIs",
+                "None"
+            ),
+            API.API(
+                "Get System Tasks",
+                """Retrieves all tasks in the system. Returns a list of task objects with their details.
+Required JSON:
+{}""",
+                "/ai/getSystemTasks",
+                "None"
+            ),
+            API.API(
+                "Fetch User",
+                """Retrieves a specific user by username. Returns user object with details.
+Required JSON:
+{
+    "username": "string (required)"
+}""",
+                "/ai/fetchUser",
+                "None"
+            ),
+            API.API(
+                "Fetch Role",
+                """Retrieves a specific role by role name. Returns role object with details.
+Required JSON:
+{
+    "roleName": "string (required)"
+}""",
+                "/ai/fetchRole",
+                "None"
+            ),
+            API.API(
+                "Fetch Group",
+                """Retrieves a specific group by group name. Returns group object with details.
+Required JSON:
+{
+    "groupName": "string (required)"
+}""",
+                "/ai/fetchGroup",
+                "None"
+            ),
+            API.API(
+                "Fetch API",
+                """Retrieves a specific API by API name. Returns API object with details.
+Required JSON:
+{
+    "apiName": "string (required)"
+}""",
+                "/ai/fetchAPI",
+                "None"
+            ),
+            API.API(
+                "Fetch Task",
+                """Retrieves a specific task by task ID. Returns task object with details.
+Required JSON:
+{
+    "taskId": "integer (required)"
+}""",
+                "/ai/fetchTask",
+                "None"
+            ),
+            API.API(
+                "Create Task",
+                """Creates a new task with specified details and assigns it to users.
+Required JSON:
+{
+    "taskName": "string (required)",
+    "taskDescription": "string (required)",
+    "taskStatus": "boolean (required)",
+    "assignees": ["string (required)"] - List of usernames to assign the task to
+}""",
+                "/ai/createTask",
+                "None"
+            ),
+            API.API(
+                "Update Task",
+                """Updates an existing task with new details.
+Required JSON:
+{
+    "taskId": "integer (required)",
+    "taskName": "string (required)",
+    "taskDescription": "string (required)",
+    "taskStatus": "boolean (required)"
+}""",
+                "/ai/updateTask",
+                "None"
+            ),
+            API.API(
+                "Delete Task",
+                """Deletes a task by its ID.
+Required JSON:
+{
+    "taskId": "integer (required)"
+}""",
+                "/ai/deleteTask",
+                "None"
+            ),
+            API.API(
+                "Close Task",
+                """Closes a task by its ID.
+Required JSON:
+{
+    "taskId": "integer (required)"
+}""",
+                "/ai/closeTask",
+                "None"
+            ),
+            API.API(
+                "Assign Users to Task",
+                """Assigns multiple users to a task.
+Required JSON:
+{
+    "assignees": ["string (required)"] - List of usernames to assign,
+    "taskID": "integer (required)"
+}""",
+                "/ai/assignUsersToTask",
+                "None"
+            )
+        ]
+
+        # Add all system APIs to the instance f
+        for api in system_apis:
+            self.apis.append(api)
+        self.businessRules = [] # String of business rules
         self.saveInstance()
-        
+        self.taskQueue = queue.Queue()
+        worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
+        worker_thread.start()
+
     def saveInstance(self):
         """
         Method to save the instance to an XML file
@@ -162,6 +350,8 @@ class System:
         customerEmail.text = self.contactEmail
         domain = ET.SubElement(root,"domain")
         domain.text = self.domain
+        aiAccessToken = ET.SubElement(root,"aiAccessToken")
+        aiAccessToken.text = self.aiAccessToken
         groups_save = ET.SubElement(root,"Groups")
         for groupVal in self.groups:
             group_det = groupVal.getDetails()
@@ -174,6 +364,12 @@ class System:
             for groupuser in group_users:
                 group_user_tab = ET.SubElement(users_tab,"username")
                 group_user_tab.text = groupuser.getUserName()
+        files_save = ET.SubElement(root, "Files")
+        for file in self.sysFiles:
+            file_tab = ET.SubElement(files_save, "File")
+            file_tab.set("name", file.name)
+            file_tab.set("size", str(file.size))
+            file_tab.set("modified", file.modified.strftime('%Y-%m-%d %H:%M:%S'))
         users_save = ET.SubElement(root, "Users")
         for userVal in self.users:
             user_tab = ET.SubElement(users_save, "User")
@@ -226,6 +422,20 @@ class System:
             for tempTask in taskVal.getPreviousTask():
                 task_prev_task_tab = ET.SubElement(task_prev_tab, "TaskID")
                 task_prev_task_tab.text = str(tempTask.getTaskId())
+        apis_save = ET.SubElement(root, "APIs")
+        for apiVal in self.apis:
+            api_tab = ET.SubElement(apis_save, "API")
+            api_tab.set("Name", apiVal.getApiName())
+            api_tab.set("Description", apiVal.getApiDescription())
+            api_tab.set("Endpoint", apiVal.getApiEndpoint())
+            api_tab.set("String", apiVal.getApiString())
+        for threadAPIVal in self.threadAPIs:
+            thread_api_tab = ET.SubElement(apis_save, "ThreadAPI")
+            thread_api_tab.set("Name", threadAPIVal.getThreadName())
+            thread_api_tab.set("Description", threadAPIVal.getThreadDescription())
+            thread_api_tab.set("String", threadAPIVal.getThreadString())
+        businessRules_save = ET.SubElement(root, "BusinessRules")
+        businessRules_save.text = ','.join(self.businessRules)
         tree = ET.ElementTree(root)
         with open(xml_filename, "wb") as file:
             tree.write(file, encoding="utf-8", xml_declaration=True)
@@ -245,6 +455,11 @@ class System:
         self.groups = []
         self.roles = []
         self.users = []
+        self.aiAccessToken = root.find("aiAccessToken").text
+        self.apis = []
+        self.threadAPIs = []
+        business_rules_text = root.find("BusinessRules").text
+        self.businessRules = business_rules_text.split(',') if business_rules_text else []
         for tempRole_loop in root.find("Roles").findall("Role"):
             tempRole = Role.Role(
                 roleTitle=tempRole_loop.get("Title"),
@@ -279,24 +494,87 @@ class System:
                 thisUserObj.addToGroup(findGroupByName(temp_User_Group_Loop.text,self.groups))
         self.permissions = json.loads(root.find("Permissions").text)
         self.tasks = []
+        self.sysFiles = []
+        for tempFile_loop in root.find("Files").findall("File"):
+            file = File.File(
+                name=tempFile_loop.get("name"),
+                size=int(tempFile_loop.get("size")),
+                modified=datetime.datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
+            )
+            self.sysFiles.append(file)
+
+        # First pass: Create all tasks without previous task relationships
+        task_map = {}  # Map to store tasks by ID for second pass
         for tempTask_loop in root.find("Tasks").findall("Task"):
+            # Get assigned users
             usersAssigned = []
             for usname in tempTask_loop.find("UsersAssigned").findall("Username"):
-                usersAssigned.append(findUserByUserName(usname.text,self.users))
-            previousTasks = []
-            for taskID in tempTask_loop.find("PreviousTasks").findall("TaskID"):
-                previousTasks.append(findTaskByID(int(taskID.text),self.tasks))
+                user = findUserByUserName(usname.text, self.users)
+                if user:
+                    usersAssigned.append(user)
+                else:
+                    print(f"Warning: User {usname.text} not found when loading task assignments")
+
+            # Get creator user
+            creator_username = tempTask_loop.find("CreatorUser").text
+            creator_user = findUserByUserName(creator_username, self.users)
+            if not creator_user:
+                print(f"Warning: Creator user {creator_username} not found when loading task")
+                continue
+
+            # Create task
             tempTask = Task.Task(
                 taskId=int(tempTask_loop.get("TaskID")),
                 titleName=tempTask_loop.find("Title").text,
                 description=tempTask_loop.find("Description").text,
                 creationTimeStamp=datetime.datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
                 assignedUsers=usersAssigned,
-                creatorUser=findUserByUserName(tempTask_loop.find("CreatorUser").text,self.users),
+                creatorUser=creator_user,
                 status=bool(tempTask_loop.find("Status").text),
-                previousTask=previousTasks
+                previousTask=[]  # Will be populated in second pass
             )
+            
+            # Store task in map and system
+            task_map[tempTask.getTaskId()] = tempTask
             self.tasks.append(tempTask)
+            
+            # Add task to users' task lists
+            for user in usersAssigned:
+                user.addTask(tempTask)
+            creator_user.addTask(tempTask)
+
+        # Second pass: Set up previous task relationships
+        for tempTask_loop in root.find("Tasks").findall("Task"):
+            task_id = int(tempTask_loop.get("TaskID"))
+            task = task_map.get(task_id)
+            if not task:
+                continue
+                
+            previousTasks = []
+            for taskID in tempTask_loop.find("PreviousTasks").findall("TaskID"):
+                prev_task_id = int(taskID.text)
+                prev_task = task_map.get(prev_task_id)
+                if prev_task:
+                    previousTasks.append(prev_task)
+                else:
+                    print(f"Warning: Previous task {prev_task_id} not found when loading task {task_id}")
+            task.previousTask = previousTasks
+
+        for tempAPI_loop in root.find("APIs").findall("API"):
+            tempAPI = API.API(
+                apiName=tempAPI_loop.get("Name"),
+                apiDescription=tempAPI_loop.get("Description"),
+                apiEndpoint=tempAPI_loop.get("Endpoint"),
+                apiString=tempAPI_loop.get("String")
+            )
+            self.apis.append(tempAPI)
+        for tempThreadAPI_loop in root.find("APIs").findall("ThreadAPI"):
+            tempThreadAPI = ThreadAPI.ThreadAPI(
+                threadName=tempThreadAPI_loop.get("Name"),
+                threadDescription=tempThreadAPI_loop.get("Description"),
+                threadString=tempThreadAPI_loop.get("String")
+            )
+            self.threadAPIs.append(tempThreadAPI)
 
     #User Methods
     def getUser(self,username:str) -> User:
@@ -340,17 +618,35 @@ class System:
             for tempGroup in tempUser.getGroups():
                 tempGroup.removeUser(tempUser)
     
-    def assignTaskToUser(self,username:str, taskTitle:str, taskDescription:str):
+    def assignTaskToUser(self, username: str, taskID: int):
         """
         Method to assign a task to a user
         Args:
             username (str): The username of the user
-            taskTitle (str): The title of the task
-            taskDescription (str): The description of the task
+            taskID (int): The ID of the task to assign
+        Returns:
+            bool: True if task was assigned successfully, False otherwise
         """
-        tempUser = findUserByUserName(username,self.users)
-        if tempUser:
-            tempUser.addTask(taskTitle,taskDescription)
+        tempUser = findUserByUserName(username, self.users)
+        if not tempUser:
+            print(f"Failed to assign task {taskID} to user {username}: User not found")
+            return False
+            
+        tempTask = findTaskByID(taskID, self.tasks)
+        if not tempTask:
+            print(f"Failed to assign task {taskID} to user {username}: Task not found")
+            return False
+            
+        # Check if user is already assigned
+        if tempUser in tempTask.getAssignedUsers():
+            print(f"User {username} is already assigned to task {taskID}")
+            return True
+            
+        # Assign task to user
+        tempTask.assignUser(tempUser)
+        tempUser.addTask(tempTask)
+        print(f"Successfully assigned task {taskID} to user {username}")
+        return True
     
     def closeTask(self, taskID: int):
         """
@@ -374,6 +670,14 @@ class System:
                         user_task.updateStatus(False)
             return True
         return False
+    
+    def getAIAccessToken(self) -> str:
+        """
+        Getter for the AI access token
+        Returns:
+            str: The AI access token
+        """
+        return self.aiAccessToken
     
     def resetUserPassword(self, username:str, newPassword:str):
         """
@@ -403,7 +707,7 @@ class System:
                 return None
         return None
     
-    def getSysGroups(self) -> list[Group]:
+    def getSysGroups(self):
         """
         Method to get the groups in the system
         Returns:
@@ -430,7 +734,7 @@ class System:
                     else:
                         print(f"User {username} is already in group {tempGroup}")
     
-    def getSysRoles(self) -> list[Role]:
+    def getSysRoles(self):
         """
         Method to get the roles in the system
         Returns:
@@ -458,7 +762,7 @@ class System:
         else:    
             print("User not found")
 
-    def getSysUsers(self) -> list[User]:
+    def getSysUsers(self):
         """
         Method to get the users in the system
         Returns:
@@ -586,27 +890,39 @@ class System:
         # Remove group from system
         self.groups.remove(group)
 
-    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task]=[]):
+    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask=[]):
         """
-        Creates a new task
+        Method to create a new task
         Args:
             taskTitle (str): The title of the task
             taskDescription (str): The description of the task
-            taskAssignees (list[str]): List of usernames to assign the task to
+            taskAssignees (list[str]): The list of usernames to assign the task to
             creatorUser (User): The user creating the task
-            previousTask (list[Task], optional): List of previous tasks. Defaults to [].
+            previousTask (list[Task]): The list of previous tasks (for replies)
         """
+        # Check for duplicate tasks
+        for existing_task in self.tasks:
+            if (existing_task.getTitle() == taskTitle and 
+                existing_task.getDescription() == taskDescription and
+                existing_task.getCreatorUser() == creatorUser and
+                existing_task.getCreationTimeStamp() > datetime.datetime.now() - datetime.timedelta(minutes=5)):
+                raise ValueError("A similar task was created recently. Please wait a few minutes before creating another task.")
+        
         taskId = findUniqueTaskID(self.tasks)
         assignedUsers = []
-        for username in taskAssignees:
-            user = findUserByUserName(username, self.users)
-            if user:
-                assignedUsers.append(user)
-        newTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
-        self.tasks.append(newTask)
+        for assignee in taskAssignees:
+            tempUser = findUserByUserName(assignee, self.users)
+            if tempUser:
+                assignedUsers.append(tempUser)
+        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        self.tasks.append(tempTask)
+        # Add task to creator's task list
+        creatorUser.addTask(tempTask)
+        # Add task to assignees' task lists
         for user in assignedUsers:
-            user.addTask(newTask)
-        creatorUser.addTask(newTask)
+            user.addTask(tempTask)
+        self.taskQueue.put(tempTask)
+        return tempTask
 
     def getTask(self, taskID: int) -> Task:
         """
@@ -641,3 +957,197 @@ class System:
             iTask.getCreatorUser().removeTask(iTask)
             return True
         return False
+    
+    def getSysAPIs(self):
+        """
+        Method to get the APIs in the system
+        Returns:
+            list[API]: The list of APIs in the system
+        """
+        return self.apis
+    
+    def findAPIByName(self, apiName: str) -> API:
+        """
+        Finds an API by its name
+        Args:
+            apiName (str): The name of the API
+        Returns:
+            API: The API with the given name, None if not found
+        """
+        return findAPIbyName(apiName, self.apis)
+    
+    def addAPI(self, api: API):
+        """
+        Adds an API to the system
+        Args:
+            api (API): The API to add
+        """
+        self.apis.append(api)
+        
+    def removeAPI(self, api: API):
+        """
+        Removes an API from the system
+        Args:
+            api (API): The API to remove
+        """
+        self.apis.remove(api)
+
+    def modifyAPI(self, apiName: str, apiDescription: str):
+        """
+        Modifies an API in the system
+        Args:
+            api (API): The API to modify
+        """
+        tempAPI = self.findAPIByName(apiName, self.apis)
+        if tempAPI:
+            tempAPI.setDescription(apiDescription)
+        else:
+            print("API not found")
+
+    def updateTask(self, taskID: int, taskTitle: str, taskDescription: str, taskStatus: bool):
+        """
+        Updates a task
+        Args:
+            taskID (int): The ID of the task
+            taskTitle (str): The title of the task  
+            taskDescription (str): The description of the task
+            taskStatus (bool): The status of the task
+        """
+        tempTask = findTaskByID(taskID, self.tasks)
+        if tempTask:
+            tempTask.setTitle(taskTitle)
+            tempTask.setDescription(taskDescription)
+            tempTask.setStatus(taskStatus)  
+            return True
+        return False
+    
+    def deleteTask(self, taskID: int):
+        """
+        Deletes a task
+        Args:
+            taskID (int): The ID of the task
+        """
+        tempTask = findTaskByID(taskID, self.tasks)
+        if tempTask:
+            self.tasks.remove(tempTask)
+            return True
+        return False
+
+    def getBusinessRules(self) -> list:
+        """
+        Gets the business rules
+        Returns:
+            list: The list of business rules
+        """
+        return self.businessRules
+
+    def addBusinessRule(self, businessRule: str):
+        """
+        Adds a business rule to the system
+        Args:
+            businessRule (str): The business rule to add
+        """
+        if businessRule not in self.businessRules:
+            self.businessRules.append(businessRule)
+
+    def removeBusinessRule(self, businessRule: str):
+        """
+        Removes a business rule from the system
+        Args:
+            businessRule (str): The business rule to remove
+        """
+        if businessRule in self.businessRules:
+            self.businessRules.remove(businessRule)
+    
+    def uploadFile(self, fileName: str):
+        """
+        Uploads a file to the system
+        Args:
+            fileName (str): The name of the file to upload
+        """
+        file_path = os.path.join("uploads", fileName)
+        if os.path.exists(file_path):
+            file = File.File(fileName)
+            file.updateFileInfo(file_path)
+            self.sysFiles.append(file)
+
+    def getFiles(self) -> list:
+        """
+        Gets the files in the system
+        Returns:
+            list: The list of files in the system with their details
+        """
+        return [file.toDict() for file in self.sysFiles]
+
+    def removeFile(self, fileName: str):
+        """
+        Removes a file from the system
+        Args:
+            fileName (str): The name of the file to remove
+        """
+        for file in self.sysFiles:
+            if file.name == fileName:
+                self.sysFiles.remove(file)
+                break
+
+    def getSysThreads(self) -> list:
+        """
+        Gets the thread APIs in the system
+        Returns:
+            list: The list of thread APIs in the system
+        """
+        return self.threadAPIs  # Return the actual ThreadAPI objects
+
+    def addThreadAPI(self, threadAPI: ThreadAPI):
+        """
+        Adds a thread API to the system
+        Args:
+            threadAPI (ThreadAPI): The thread API to add
+        """
+        self.threadAPIs.append(threadAPI)
+
+    def removeThreadAPI(self, threadAPI: ThreadAPI):
+        """
+        Removes a thread API from the system
+        Args:
+            threadAPI (ThreadAPI): The thread API to remove
+        """
+        self.threadAPIs.remove(threadAPI)
+
+    def getThreadAPIByName(self, threadAPIName: str) -> ThreadAPI:
+        """
+        Gets a thread API by its name
+        Args:
+            threadAPIName (str): The name of the thread API
+        Returns:
+            ThreadAPI: The thread API with the given name, None if not found
+        """
+        for threadAPI in self.threadAPIs:
+            if threadAPI.getThreadName() == threadAPIName:
+                return threadAPI
+        return None
+
+    def updateThreadAPI(self, threadAPIName: str, threadAPIDescription: str, threadAPIString: str):
+        """
+        Updates a thread API
+        Args:
+            threadAPIName (str): The name of the thread API
+            threadAPIDescription (str): The description of the thread API
+            threadAPIString (str): The string of the thread API
+        """
+        tempThreadAPI = self.getThreadAPIByName(threadAPIName)
+        if tempThreadAPI:
+            tempThreadAPI.setThreadDescription(threadAPIDescription)
+            tempThreadAPI.setThreadString(threadAPIString)
+        else:
+            print("Thread API not found")
+
+    def findUserByUserName(self, username: str) -> User:
+        """
+        Finds a user by their username
+        Args:
+            username (str): The username of the user
+        Returns:
+            User: The user with the given username, None if not found
+        """
+        return findUserByUserName(username, self.users)
