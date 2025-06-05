@@ -1,6 +1,6 @@
 import "../styles/navbar.css";
 
-function Navbar({ HomePermission, IAMPermission, apisPermission, managementPermission }) {
+function Navbar({ HomePermission, IAMPermission, apisPermission, managementPermission, nalvaPermission }) {
     const handleLogout = () => {
         localStorage.removeItem("local_cookie");
         window.location.href = "/";
@@ -28,6 +28,11 @@ function Navbar({ HomePermission, IAMPermission, apisPermission, managementPermi
                 {managementPermission && (
                     <a href="/management" className="navbar-link">
                         Management
+                    </a>
+                )}
+                {nalvaPermission && (
+                    <a href="/nalva" className="navbar-link">
+                        Nalva
                     </a>
                 )}
                 <button onClick={handleLogout} className="logout-button">

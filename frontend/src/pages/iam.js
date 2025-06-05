@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/navbar";
+import Navbar from "../components/Navbar";
 import ErrorPage from "./ErrorPage";
 import "../styles/iam.css";
 
@@ -149,6 +149,7 @@ function IAM() {
                     IAMPermission={permissions?.iam} 
                     apisPermission={permissions?.development}
                     managementPermission={permissions?.management}
+                    nalvaPermission={permissions?.nalva}
                 />
                 <div className="loading-message">
                     <h2>Loading...</h2>

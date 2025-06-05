@@ -1248,6 +1248,82 @@ def viewThread():
     else:
         return jsonify({"message": "Failed"})
 
+@app.route('/api/nalva/newConversation', methods=['POST'])
+def newNalvaConversation():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            first_message = data.get('message')
+            if not first_message:
+                return jsonify({"message": "Message is required"})
+            
+            try:
+                conversation_id = thisSystem.newNalvaConversation(username, first_message)
+                return jsonify({
+                    "message": "Success",
+                    "conversation_id": conversation_id
+                })
+            except Exception as e:
+                return jsonify({"message": f"Failed to create conversation: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/sendMessage', methods=['POST'])
+def sendNalvaMessage():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            conversation_id = data.get('conversation_id')
+            message = data.get('message')
+            
+            if not conversation_id or not message:
+                return jsonify({"message": "Conversation ID and message are required"})
+            
+            try:
+                success, reply = thisSystem.sendNalvaMessage(conversation_id, message)
+                if success:
+                    return jsonify({
+                        "message": "Success",
+                        "reply": reply
+                    })
+                else:
+                    return jsonify({"message": "Failed to send message"})
+            except Exception as e:
+                return jsonify({"message": f"Failed to send message: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/getConversationHistory', methods=['POST'])
+def getNalvaConversationHistory():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            try:
+                history = thisSystem.getConversationHistory(username)
+                return jsonify({
+                    "message": "Success",
+                    "conversations": history
+                })
+            except Exception as e:
+                return jsonify({"message": f"Failed to get conversation history: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
 def signal_handler(signum, frame):
     """Handle termination signals by saving the instance"""
     print("\nSaving instance before exit...")

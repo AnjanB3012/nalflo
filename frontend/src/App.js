@@ -19,6 +19,7 @@ import Management from './pages/management';
 import ViewAPI from './pages/viewAPI';
 import ViewThread from './pages/viewThread';
 import CreateNewThread from './pages/createNewThread';
+import NalvaPage from './pages/NalvaPage';
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
         <Route path="/createNewAPI" element={<CreateNewAPI />} />
         <Route path="/createNewThread" element={<CreateNewThread />} />
         <Route path="/management" element={<Management />} />
+        <Route path="/nalva" element={<NalvaPage />} />
       </Routes>
     </Router>
   );
