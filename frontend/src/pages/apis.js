@@ -10,6 +10,7 @@ function API()
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const [apis, setAPIs] = useState([]);
+    const [threads, setThreads] = useState([]);
     const [files, setFiles] = useState([]);
     const [uploadError, setUploadError] = useState("");
     const [uploadSuccess, setUploadSuccess] = useState("");
@@ -49,6 +50,19 @@ function API()
                     if (allAPIsData.message === "Success")
                     {
                         setAPIs(allAPIsData.apis);
+                    }
+
+                    // Fetch threads
+                    const threadsResponse = await fetch("http://localhost:8080/api/threads/getAllThreads", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: cookieToken }),
+                    });
+                    const threadsData = await threadsResponse.json();
+                    if (threadsData.message === "Success") {
+                        setThreads(threadsData.threads);
                     }
 
                     // Fetch files
@@ -249,6 +263,40 @@ function API()
                                     <td>{api.apiDescription}</td>
                                     <td>{api.apiEndpoint}</td>
                                     <td><button className="button button-success" onClick={() => navigate(`/viewAPI/${api.apiName}`)}>View</button></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Threads</h2>
+                        <button className="button button-primary" onClick={() => navigate("/createNewThread")}>Create New Thread</button>
+                    </div>
+                    <table className="api-table">
+                        <thead>
+                            <tr>
+                                <th>Thread Name</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {threads.map((thread) => (
+                                <tr key={thread.threadName}>
+                                    <td>{thread.threadName}</td>
+                                    <td>{thread.threadDescription}</td>
+                                    <td>
+                                        <div className="button-group">
+                                            <button 
+                                                className="button button-success"
+                                                onClick={() => navigate(`/viewThread/${thread.threadName}`)}
+                                            >
+                                                View
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

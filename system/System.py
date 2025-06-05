@@ -4,6 +4,7 @@ import system.Role as Role
 import system.User as User
 import system.API as API
 import system.File as File
+import system.ThreadAPI as ThreadAPI
 import xml.etree.ElementTree as ET
 import system.Task as Task
 import json
@@ -153,6 +154,7 @@ class System:
         self.users = []
         self.tasks = []
         self.apis = []
+        self.threadAPIs = []
         self.permissions = ["home","iam","AssignToAll", "development", "management"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
@@ -427,6 +429,11 @@ Required JSON:
             api_tab.set("Description", apiVal.getApiDescription())
             api_tab.set("Endpoint", apiVal.getApiEndpoint())
             api_tab.set("String", apiVal.getApiString())
+        for threadAPIVal in self.threadAPIs:
+            thread_api_tab = ET.SubElement(apis_save, "ThreadAPI")
+            thread_api_tab.set("Name", threadAPIVal.getThreadName())
+            thread_api_tab.set("Description", threadAPIVal.getThreadDescription())
+            thread_api_tab.set("String", threadAPIVal.getThreadString())
         businessRules_save = ET.SubElement(root, "BusinessRules")
         businessRules_save.text = ','.join(self.businessRules)
         tree = ET.ElementTree(root)
@@ -450,7 +457,7 @@ Required JSON:
         self.users = []
         self.aiAccessToken = root.find("aiAccessToken").text
         self.apis = []
-        # Initialize businessRules as a list and parse the XML text into a list
+        self.threadAPIs = []
         business_rules_text = root.find("BusinessRules").text
         self.businessRules = business_rules_text.split(',') if business_rules_text else []
         for tempRole_loop in root.find("Roles").findall("Role"):
@@ -521,6 +528,13 @@ Required JSON:
                 apiString=tempAPI_loop.get("String")
             )
             self.apis.append(tempAPI)
+        for tempThreadAPI_loop in root.find("APIs").findall("ThreadAPI"):
+            tempThreadAPI = ThreadAPI.ThreadAPI(
+                threadName=tempThreadAPI_loop.get("Name"),
+                threadDescription=tempThreadAPI_loop.get("Description"),
+                threadString=tempThreadAPI_loop.get("String")
+            )
+            self.threadAPIs.append(tempThreadAPI)
 
     #User Methods
     def getUser(self,username:str) -> User:
@@ -1043,3 +1057,55 @@ Required JSON:
             if file.name == fileName:
                 self.sysFiles.remove(file)
                 break
+
+    def getSysThreads(self) -> list:
+        """
+        Gets the thread APIs in the system
+        Returns:
+            list: The list of thread APIs in the system
+        """
+        return self.threadAPIs  # Return the actual ThreadAPI objects
+
+    def addThreadAPI(self, threadAPI: ThreadAPI):
+        """
+        Adds a thread API to the system
+        Args:
+            threadAPI (ThreadAPI): The thread API to add
+        """
+        self.threadAPIs.append(threadAPI)
+
+    def removeThreadAPI(self, threadAPI: ThreadAPI):
+        """
+        Removes a thread API from the system
+        Args:
+            threadAPI (ThreadAPI): The thread API to remove
+        """
+        self.threadAPIs.remove(threadAPI)
+
+    def getThreadAPIByName(self, threadAPIName: str) -> ThreadAPI:
+        """
+        Gets a thread API by its name
+        Args:
+            threadAPIName (str): The name of the thread API
+        Returns:
+            ThreadAPI: The thread API with the given name, None if not found
+        """
+        for threadAPI in self.threadAPIs:
+            if threadAPI.getThreadName() == threadAPIName:
+                return threadAPI
+        return None
+
+    def updateThreadAPI(self, threadAPIName: str, threadAPIDescription: str, threadAPIString: str):
+        """
+        Updates a thread API
+        Args:
+            threadAPIName (str): The name of the thread API
+            threadAPIDescription (str): The description of the thread API
+            threadAPIString (str): The string of the thread API
+        """
+        tempThreadAPI = self.getThreadAPIByName(threadAPIName)
+        if tempThreadAPI:
+            tempThreadAPI.setThreadDescription(threadAPIDescription)
+            tempThreadAPI.setThreadString(threadAPIString)
+        else:
+            print("Thread API not found")

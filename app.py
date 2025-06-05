@@ -3,6 +3,7 @@ import system.Role as Role
 import system.Group as Group
 import system.User as User
 import system.API as API
+import system.ThreadAPI as ThreadAPI
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 from flask_cors import CORS
@@ -12,6 +13,11 @@ from datetime import datetime, timezone
 from pyhold import pyhold
 import uuid
 import werkzeug
+import threading
+import signal
+import sys
+from threading import Event
+import time
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
@@ -22,21 +28,70 @@ cookies = pyhold("cookies.xml")
 
 thisSystem = System.System()
 
-# It should upload files to the root directory
 UPLOAD_FOLDER = "uploads"
-
-# Create uploads directory if it doesn't exist
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+active_threads = {}  # Dictionary to track active threads and their stop events
+
 def stringFunctionMaker(inputFunctionString):
-    # Indent each line of the user-supplied function body
     return "\n    ".join(
         repr(line)[1:-1]
         for line in inputFunctionString.split("<break>")
     )
 
+def start_thread(thread_api, thread_args=None):
+    """Helper function to start a single thread"""
+    if thread_args is None:
+        thread_args = {}
+    
+    # Create a stop event for this thread
+    stop_event = Event()
+    
+    def thread_function():
+        namespace = {'thisSystem': thisSystem, **thread_args}
+        # Handle both ThreadAPI objects and dictionaries
+        thread_string = thread_api.getThreadString() if hasattr(thread_api, 'getThreadString') else thread_api['threadString']
+        
+        # Add stop event to namespace
+        namespace['stop_event'] = stop_event
+        
+        # Wrap the thread code in a try-except to handle cleanup
+        try:
+            # Execute the thread code directly
+            exec(thread_string, namespace)
+        except Exception as e:
+            print(f"Thread {thread_api.getThreadName() if hasattr(thread_api, 'getThreadName') else thread_api['threadName']} error: {str(e)}")
+        finally:
+            # Clean up thread tracking when it exits
+            thread_name = thread_api.getThreadName() if hasattr(thread_api, 'getThreadName') else thread_api['threadName']
+            if thread_name in active_threads:
+                del active_threads[thread_name]
+    
+    thread = threading.Thread(target=thread_function, daemon=True)
+    thread.start()
+    
+    # Store thread and stop event
+    thread_name = thread_api.getThreadName() if hasattr(thread_api, 'getThreadName') else thread_api['threadName']
+    active_threads[thread_name] = {'thread': thread, 'stop_event': stop_event}
+    
+    return thread
+
+def start_all_threads():
+    """Start all threads in the system"""
+    if not thisSystem.getSetUpStatus():
+        return
+        
+    threads = thisSystem.getSysThreads()
+    for thread_api in threads:
+        start_thread(thread_api)
+
+# Start all threads when the app initializes
+start_all_threads()
+
 # New APIs go here
+
+
 
 
 
@@ -788,9 +843,13 @@ def addNewAPI():
             tempAPI = API.API(apiName=api_name, apiDescription=api_description, apiEndpoint=api_endpoint, apiString=api_string)
             thisSystem.addAPI(tempAPI)
             functionStr = stringFunctionMaker(api_string)
+            
+            # Convert API name to function name format (lowercase with underscores)
+            function_name = api_name.lower().replace(' ', '_')
+            
             new_endpoint = (
-                f"@app.route('/{api_endpoint}', methods=['GET', 'POST'])\n"
-                f"def {api_endpoint}():\n"
+                f"@app.route('{api_endpoint}', methods=['GET', 'POST'])\n"
+                f"def {function_name}():\n"
                 f"    {functionStr}\n"
             )
             with open("app.py", "r") as f:
@@ -934,6 +993,272 @@ def removeFile():
             return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/viewAPI', methods=['POST'])
+def viewAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            api_name = data.get('api_name')
+            api = thisSystem.findAPIByName(api_name)
+            if api is None:
+                return jsonify({"message": "API not found"})
+            response = {
+                "message": "Success",
+                "api": api.toDict()
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/modifyAPI', methods=['POST'])
+def modifyAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            api_name = data.get('api_name')
+            new_api_string = data.get('new_api_string')
+            api = thisSystem.findAPIByName(api_name)
+            if api is None:
+                return jsonify({"message": "API not found"})
+            
+            # Update the API string
+            api.setAPIString(new_api_string)
+            
+            # Update the API in app.py
+            with open("app.py", "r") as f:
+                content = f.read()
+            
+            # Find the API endpoint in the file
+            endpoint = api.getApiEndpoint()
+            start_marker = f"@app.route('/{endpoint}'"
+            end_marker = "\n\n"
+            
+            # Split the content to find the API definition
+            parts = content.split(start_marker)
+            if len(parts) > 1:
+                # Get the function body
+                function_body = parts[1].split(end_marker)[0]
+                
+                # Create new API definition with updated string
+                functionStr = stringFunctionMaker(new_api_string)
+                new_endpoint = (
+                    f"@app.route('/{endpoint}', methods=['GET', 'POST'])\n"
+                    f"def {endpoint}():\n"
+                    f"    {functionStr}\n"
+                )
+                
+                # Replace the old API definition with the new one
+                updated_content = content.replace(function_body, new_endpoint)
+                
+                with open("app.py", "w") as f:
+                    f.write(updated_content)
+                
+                return jsonify({"message": "Success"})
+            else:
+                return jsonify({"message": "Failed to update API in app.py"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/deleteAPI', methods=['POST'])
+def deleteAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            api_name = data.get('api_name')
+            api = thisSystem.findAPIByName(api_name)
+            if api is None:
+                return jsonify({"message": "API not found"})
+            
+            # Remove the API from the system
+            thisSystem.removeAPI(api)
+            
+            # Remove the API from app.py
+            with open("app.py", "r") as f:
+                content = f.read()
+            
+            # Find the API endpoint in the file
+            endpoint = api.getApiEndpoint()
+            start_marker = f"@app.route('/{endpoint}'"
+            end_marker = "\n\n"
+            
+            # Split the content to find the API definition
+            parts = content.split(start_marker)
+            if len(parts) > 1:
+                # Get the function body
+                function_body = parts[1].split(end_marker)[0]
+                
+                # Remove the API definition
+                updated_content = content.replace(start_marker + function_body + end_marker, "")
+                
+                with open("app.py", "w") as f:
+                    f.write(updated_content)
+                
+                return jsonify({"message": "Success"})
+            else:
+                return jsonify({"message": "Failed to remove API from app.py"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/api/threads/addThreadAPI', methods=['POST'])
+def addThreadAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            thread_name = data.get('thread_name')
+            thread_description = data.get('thread_description')
+            thread_string = data.get('thread_string')
+            thread_args = data.get('thread_args', {})  # Optional arguments to pass to the thread function
+            
+            # Create the thread API object without debug prints
+            thread_api = ThreadAPI.ThreadAPI(
+                threadName=thread_name,
+                threadDescription=thread_description,
+                threadString=thread_string
+            )
+            
+            # Add to system's thread list
+            thisSystem.addThreadAPI(thread_api)
+            
+            # Start the thread
+            thread = start_thread(thread_api, thread_args)
+            
+            return jsonify({"message": "Success", "thread_id": id(thread)})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/threads/modifyThreadAPI', methods=['POST'])
+def modifyThreadAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            thread_name = data.get('thread_name')
+            new_thread_string = data.get('new_thread_string')
+            thread_args = data.get('thread_args', {})  # Optional arguments to pass to the thread function
+            
+            # Find the thread in the system
+            thread_api = thisSystem.findThreadByName(thread_name)
+            if thread_api is None:
+                return jsonify({"message": "Thread not found"})
+            
+            # Update the thread string without debug prints
+            thread_api.setThreadString(new_thread_string)
+            
+            # Start the updated thread
+            thread = start_thread(thread_api, thread_args)
+            
+            return jsonify({"message": "Success", "thread_id": id(thread)})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/threads/removeThreadAPI', methods=['POST'])
+def removeThreadAPI():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            thread_name = data.get('thread_name')
+            
+            thread_api = thisSystem.getThreadAPIByName(thread_name)
+            if thread_api is None:
+                return jsonify({"message": "Thread not found"})
+            
+            # Stop the thread if it's running
+            if thread_name in active_threads:
+                print(f"Stopping thread: {thread_name}")
+                active_threads[thread_name]['stop_event'].set()
+                
+                # DON'T WAIT - just remove from tracking immediately
+                del active_threads[thread_name]
+                print(f"Thread {thread_name} marked for termination")
+            
+            # Remove the thread from the system
+            thisSystem.removeThreadAPI(thread_api)
+            
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/threads/getAllThreads', methods=['POST'])
+def getAllThreads():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            threads = thisSystem.getSysThreads()
+            response = {
+                "message": "Success",
+                "threads": [thread.toDict() for thread in threads]  # Convert ThreadAPI objects to dictionaries
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/threads/viewThread', methods=['POST'])
+def viewThread():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            thread_name = data.get('thread_name')
+            thread = thisSystem.getThreadAPIByName(thread_name)
+            if thread is None:
+                return jsonify({"message": "Thread not found"})
+            response = {
+                "message": "Success",
+                "thread": thread.toDict()
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+def signal_handler(signum, frame):
+    """Handle termination signals by saving the instance"""
+    print("\nSaving instance before exit...")
+    thisSystem.saveInstance()
+    print("Instance saved successfully!")
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=8080, use_reloader=False)
