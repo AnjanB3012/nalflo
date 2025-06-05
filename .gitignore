@@ -10,3 +10,5 @@ pyhold.xml
 cookies.xml
 uploads/*
 uploads/
+__pycache__/
+system/__pycache__/
