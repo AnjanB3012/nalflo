@@ -13,7 +13,7 @@ from taskQueue import processTask
 import queue
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import Nalva
 
 
@@ -346,7 +346,7 @@ Required JSON:
         xml_filename = "instance.xml"
         if os.path.exists(xml_filename):
             old_xml_path = xml_filename 
-            os.rename(old_xml_path, f"instance-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xml")
+            os.rename(old_xml_path, f"instance-{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xml")
         xml_filename = "instance.xml"
         with open(xml_filename, "w") as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -549,7 +549,7 @@ Required JSON:
             file = File.File(
                 name=tempFile_loop.get("name"),
                 size=int(tempFile_loop.get("size")),
-                modified=datetime.datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
+                modified=datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
             )
             self.sysFiles.append(file)
 
@@ -577,7 +577,7 @@ Required JSON:
                 taskId=int(tempTask_loop.get("TaskID")),
                 titleName=tempTask_loop.find("Title").text,
                 description=tempTask_loop.find("Description").text,
-                creationTimeStamp=datetime.datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
+                creationTimeStamp=datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
                 assignedUsers=usersAssigned,
                 creatorUser=creator_user,
                 status=bool(tempTask_loop.find("Status").text),
@@ -955,7 +955,7 @@ Required JSON:
             if (existing_task.getTitle() == taskTitle and 
                 existing_task.getDescription() == taskDescription and
                 existing_task.getCreatorUser() == creatorUser and
-                existing_task.getCreationTimeStamp() > datetime.datetime.now() - datetime.timedelta(minutes=5)):
+                existing_task.getCreationTimeStamp() > datetime.now() - timedelta(minutes=5)):
                 raise ValueError("A similar task was created recently. Please wait a few minutes before creating another task.")
         
         taskId = findUniqueTaskID(self.tasks)
@@ -964,7 +964,7 @@ Required JSON:
             tempUser = findUserByUserName(assignee, self.users)
             if tempUser:
                 assignedUsers.append(tempUser)
-        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.now(), assignedUsers, creatorUser, True, previousTask)
         self.tasks.append(tempTask)
         # Add task to creator's task list
         creatorUser.addTask(tempTask)
@@ -1233,13 +1233,13 @@ Required JSON:
         else:
             # Add first message to system history
             self.conversationHistory[username][str(conversationID)] = [
-                ["user", firstMessage, datetime.datetime.now(timezone.utc).isoformat()]
+                ["user", firstMessage, datetime.now(timezone.utc).isoformat()]
             ]
             # Get Nalva's reply
             reply = self.nalvaInstances[username].newMessage(firstMessage, conversationID)
             # Add Nalva's reply to system history
             self.conversationHistory[username][str(conversationID)].append(
-                ["nalva", reply, datetime.datetime.now(timezone.utc).isoformat()]
+                ["nalva", reply, datetime.now(timezone.utc).isoformat()]
             )
         
         return conversationID
@@ -1247,18 +1247,33 @@ Required JSON:
     def sendNalvaMessage(self, conversationID: int, message: str) -> tuple[bool, str]:
         """Send a message to Nalva and get a reply"""
         try:
-            # Find the conversation
-            conversation = None
-            for conv in self.conversationHistory:
-                if conv.getLatestConversationID() == conversationID:
-                    conversation = conv
+            # Find the conversation in the Nalva instance
+            username = None
+            for user, nalva_instance in self.nalvaInstances.items():
+                if nalva_instance.getLatestConversationID() == conversationID:
+                    username = user
                     break
             
-            if not conversation:
+            if not username:
                 return False, "Conversation not found"
             
+            # Get the Nalva instance
+            nalva_instance = self.nalvaInstances[username]
+            
             # Send message and get reply
-            reply = conversation.newMessage(message, conversationID)
+            reply = nalva_instance.newMessage(message, conversationID)
+            
+            # Update the conversation history in the system
+            if username in self.conversationHistory and str(conversationID) in self.conversationHistory[username]:
+                # Add user's message
+                self.conversationHistory[username][str(conversationID)].append(
+                    ["user", message, datetime.now(timezone.utc).isoformat()]
+                )
+                # Add Nalva's reply
+                self.conversationHistory[username][str(conversationID)].append(
+                    ["nalva", reply, datetime.now(timezone.utc).isoformat()]
+                )
+            
             return True, reply
         except Exception as e:
             print(f"Error sending message to Nalva: {str(e)}")
@@ -1278,7 +1293,7 @@ Required JSON:
             if str(conversationID) in conversations:
                 # Add Nalva's reply to system history
                 conversations[str(conversationID)].append(
-                    ["nalva", message, datetime.datetime.now(timezone.utc).isoformat()]
+                    ["nalva", message, datetime.now(timezone.utc).isoformat()]
                 )
                 return True
         return False

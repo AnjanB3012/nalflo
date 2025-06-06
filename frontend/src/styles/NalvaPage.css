@@ -54,6 +54,39 @@
     padding: 10px;
 }
 
+.conversation-item {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+}
+
+.conversation-item:hover {
+    background-color: #e9ecef;
+}
+
+.conversation-item.selected {
+    background-color: #e3f2fd;
+    border-color: #90caf9;
+}
+
+.conversation-preview {
+    font-size: 0.9rem;
+    color: #333;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-timestamp {
+    font-size: 0.8rem;
+    color: #666;
+}
+
 .nalva-main {
     flex: 1;
     display: flex;

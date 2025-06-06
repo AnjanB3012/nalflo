@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createNewConversation, sendMessage, getConversationHistory } from '../services/nalvaService';
 import '../styles/NalvaChat.css';
 
-const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect }) => {
+const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, onConversationUpdate }) => {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -19,14 +19,13 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect }) 
         scrollToBottom();
     }, [messages]);
 
-    // Load conversation history on component mount
+    // Load conversation history when selected conversation changes
     useEffect(() => {
         const loadConversationHistory = async () => {
             try {
                 const response = await getConversationHistory(cookieToken);
                 if (response.message === "Success" && response.conversations) {
                     setConversations(response.conversations);
-                    // If a conversation is selected, load its messages
                     if (selectedConversation) {
                         const conversationMessages = response.conversations[selectedConversation] || [];
                         setMessages(conversationMessages.map(msg => ({
@@ -37,16 +36,8 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect }) 
                         })));
                         setCurrentConversationId(parseInt(selectedConversation));
                     } else {
-                        // If no conversation is selected, show all messages
-                        const allMessages = Object.entries(response.conversations).flatMap(([conversationId, messages]) => {
-                            return messages.map(msg => ({
-                                type: msg[0],
-                                message: msg[1],
-                                timestamp: msg[2],
-                                conversationId: parseInt(conversationId)
-                            }));
-                        });
-                        setMessages(allMessages);
+                        setMessages([]);
+                        setCurrentConversationId(null);
                     }
                 }
             } catch (error) {
@@ -71,7 +62,7 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect }) 
                 response = await createNewConversation(cookieToken, inputMessage);
                 if (response.message === "Success") {
                     setCurrentConversationId(response.conversation_id);
-                    onConversationSelect(response.conversation_id);
+                    onConversationSelect(response.conversation_id.toString());
                 }
             } else {
                 // Send message in existing conversation
@@ -102,14 +93,23 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect }) 
                 ]);
                 setInputMessage('');
 
-                // Refresh conversation history to ensure consistency
-                const historyResponse = await getConversationHistory(cookieToken);
-                if (historyResponse.message === "Success" && historyResponse.conversations) {
-                    setConversations(historyResponse.conversations);
-                }
+                // Update conversation history in parent component
+                onConversationUpdate();
+            } else {
+                console.error('Failed to send message:', response.message);
             }
         } catch (error) {
             console.error('Failed to send message:', error);
+            // Show error to user
+            setMessages(prevMessages => [
+                ...prevMessages,
+                {
+                    type: 'error',
+                    message: 'Failed to send message. Please try again.',
+                    timestamp: new Date().toISOString(),
+                    conversationId: currentConversationId
+                }
+            ]);
         } finally {
             setIsLoading(false);
         }

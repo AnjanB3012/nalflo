@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NalvaChat from '../components/NalvaChat';
 import Navbar from '../components/Navbar';
+import { getConversationHistory } from '../services/nalvaService';
 import '../styles/NalvaPage.css';
 
 const NalvaPage = () => {
@@ -10,7 +11,20 @@ const NalvaPage = () => {
     const [error, setError] = useState('');
     const [cookieToken, setCookieToken] = useState(null);
     const [selectedConversation, setSelectedConversation] = useState(null);
+    const [conversations, setConversations] = useState({});
     const navigate = useNavigate();
+
+    // Load conversation history
+    const loadConversationHistory = async () => {
+        try {
+            const response = await getConversationHistory(cookieToken);
+            if (response.message === "Success" && response.conversations) {
+                setConversations(response.conversations);
+            }
+        } catch (error) {
+            console.error('Failed to load conversation history:', error);
+        }
+    };
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -38,6 +52,8 @@ const NalvaPage = () => {
                         return;
                     }
                     setPermissions(data.permissions);
+                    // Load conversation history after permissions are verified
+                    await loadConversationHistory();
                 } else {
                     setError("Failed to verify permissions");
                 }
@@ -51,6 +67,18 @@ const NalvaPage = () => {
 
         fetchUserData();
     }, [navigate]);
+
+    const handleNewChat = () => {
+        setSelectedConversation(null);
+    };
+
+    const handleConversationSelect = (conversationId) => {
+        setSelectedConversation(conversationId);
+    };
+
+    const handleConversationUpdate = async () => {
+        await loadConversationHistory();
+    };
 
     if (loading) {
         return (
@@ -102,13 +130,26 @@ const NalvaPage = () => {
                         <h2>Conversations</h2>
                         <button 
                             className="new-chat-button"
-                            onClick={() => setSelectedConversation(null)}
+                            onClick={handleNewChat}
                         >
                             New Chat
                         </button>
                     </div>
                     <div className="conversations-list">
-                        {/* Conversation list will be rendered here */}
+                        {Object.entries(conversations).map(([id, messages]) => (
+                            <div
+                                key={id}
+                                className={`conversation-item ${selectedConversation === id ? 'selected' : ''}`}
+                                onClick={() => handleConversationSelect(id)}
+                            >
+                                <div className="conversation-preview">
+                                    {messages[0][1].substring(0, 50)}...
+                                </div>
+                                <div className="conversation-timestamp">
+                                    {new Date(messages[0][2]).toLocaleDateString()}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
                 <div className="nalva-main">
@@ -120,7 +161,8 @@ const NalvaPage = () => {
                         <NalvaChat 
                             cookieToken={cookieToken} 
                             selectedConversation={selectedConversation}
-                            onConversationSelect={setSelectedConversation}
+                            onConversationSelect={handleConversationSelect}
+                            onConversationUpdate={handleConversationUpdate}
                         />
                     </div>
                 </div>
