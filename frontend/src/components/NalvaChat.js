@@ -8,7 +8,9 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, on
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [conversations, setConversations] = useState({});
+    const [isPolling, setIsPolling] = useState(false);
     const messagesEndRef = useRef(null);
+    const pollingIntervalRef = useRef(null);
 
     // Scroll to bottom of messages
     const scrollToBottom = () => {
@@ -50,6 +52,51 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, on
         }
     }, [cookieToken, selectedConversation]);
 
+    // Poll for responses when a message is sent
+    useEffect(() => {
+        if (isPolling && currentConversationId) {
+            pollingIntervalRef.current = setInterval(async () => {
+                try {
+                    const response = await fetch('http://localhost:8080/api/nalva/getResponse', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            cookie_token: cookieToken,
+                            conversation_id: currentConversationId
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.response) {
+                        // Got the response, update UI
+                        setMessages(prevMessages => [
+                            ...prevMessages,
+                            {
+                                type: 'nalva',
+                                message: data.response.message,
+                                timestamp: data.response.timestamp,
+                                conversationId: currentConversationId
+                            }
+                        ]);
+                        setIsPolling(false);
+                        clearInterval(pollingIntervalRef.current);
+                        onConversationUpdate(); // Update conversation list
+                    }
+                } catch (error) {
+                    console.error('Error polling for response:', error);
+                }
+            }, 1000); // Poll every second
+        }
+
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
+        };
+    }, [isPolling, currentConversationId, cookieToken]);
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!inputMessage.trim()) return;
@@ -78,23 +125,11 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, on
                     conversationId: currentConversationId || response.conversation_id
                 };
                 
-                // Add Nalva's reply if available
-                const nalvaMessage = response.reply ? {
-                    type: 'nalva',
-                    message: response.reply,
-                    timestamp: new Date().toISOString(),
-                    conversationId: currentConversationId || response.conversation_id
-                } : null;
-
-                setMessages(prevMessages => [
-                    ...prevMessages,
-                    userMessage,
-                    ...(nalvaMessage ? [nalvaMessage] : [])
-                ]);
+                setMessages(prevMessages => [...prevMessages, userMessage]);
                 setInputMessage('');
-
-                // Update conversation history in parent component
-                onConversationUpdate();
+                
+                // Start polling for response
+                setIsPolling(true);
             } else {
                 console.error('Failed to send message:', response.message);
             }
@@ -129,7 +164,7 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, on
                         <p>Start a new conversation by sending a message below</p>
                     </div>
                 ) : (
-                    messages.map((msg, index) => (
+                    messages.filter(msg => msg.message && msg.message.trim() !== "").map((msg, index) => (
                         <div
                             key={index}
                             className={`message ${msg.type === 'user' ? 'user-message' : 'nalva-message'}`}

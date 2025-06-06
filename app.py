@@ -1288,16 +1288,49 @@ def sendNalvaMessage():
                 return jsonify({"message": "Conversation ID and message are required"})
             
             try:
-                success, reply = thisSystem.sendNalvaMessage(conversation_id, message)
+                # Start message processing and return immediately
+                success = thisSystem.sendNalvaMessage(conversation_id, message)
                 if success:
                     return jsonify({
                         "message": "Success",
-                        "reply": reply
+                        "status": "processing"
                     })
                 else:
                     return jsonify({"message": "Failed to send message"})
             except Exception as e:
                 return jsonify({"message": f"Failed to send message: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/getResponse', methods=['POST'])
+def getNalvaResponse():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            conversation_id = data.get('conversation_id')
+            
+            if not conversation_id:
+                return jsonify({"message": "Conversation ID is required"})
+            
+            try:
+                response = thisSystem.getNalvaResponse(conversation_id)
+                if response:
+                    return jsonify({
+                        "message": "Success",
+                        "response": response
+                    })
+                else:
+                    return jsonify({
+                        "message": "Success",
+                        "status": "processing"
+                    })
+            except Exception as e:
+                return jsonify({"message": f"Failed to get response: {str(e)}"})
         else:
             return jsonify({"message": "Permission Denied"})
     else:

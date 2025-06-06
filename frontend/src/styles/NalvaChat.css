@@ -3,6 +3,8 @@
     flex-direction: column;
     height: 100%;
     background-color: #fff;
+    overflow: hidden;
+    position: relative;
 }
 
 .chat-messages {
@@ -13,6 +15,8 @@
     flex-direction: column;
     gap: 15px;
     background-color: #f8f9fa;
+    min-height: 0;
+    max-height: calc(100vh - 250px); /* Limit height to prevent stretching */
 }
 
 .empty-chat {
@@ -110,6 +114,10 @@
     padding: 20px;
     background-color: white;
     border-top: 1px solid #eee;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
 }
 
 .chat-input-form input {

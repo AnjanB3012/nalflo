@@ -52,8 +52,6 @@ const NalvaPage = () => {
                         return;
                     }
                     setPermissions(data.permissions);
-                    // Load conversation history after permissions are verified
-                    await loadConversationHistory();
                 } else {
                     setError("Failed to verify permissions");
                 }
@@ -67,6 +65,13 @@ const NalvaPage = () => {
 
         fetchUserData();
     }, [navigate]);
+
+    // Separate useEffect for loading conversation history
+    useEffect(() => {
+        if (cookieToken && permissions?.nalva) {
+            loadConversationHistory();
+        }
+    }, [cookieToken, permissions]);
 
     const handleNewChat = () => {
         setSelectedConversation(null);
@@ -136,20 +141,23 @@ const NalvaPage = () => {
                         </button>
                     </div>
                     <div className="conversations-list">
-                        {Object.entries(conversations).map(([id, messages]) => (
-                            <div
-                                key={id}
-                                className={`conversation-item ${selectedConversation === id ? 'selected' : ''}`}
-                                onClick={() => handleConversationSelect(id)}
-                            >
-                                <div className="conversation-preview">
-                                    {messages[0][1].substring(0, 50)}...
+                        {Object.entries(conversations)
+                            .filter(([id, messages]) => messages.length > 0 && messages[0][1].trim() !== "")
+                            .reverse()
+                            .map(([id, messages]) => (
+                                <div
+                                    key={id}
+                                    className={`conversation-item ${selectedConversation === id ? 'selected' : ''}`}
+                                    onClick={() => handleConversationSelect(id)}
+                                >
+                                    <div className="conversation-preview">
+                                        {messages[0][1].substring(0, 50)}...
+                                    </div>
+                                    <div className="conversation-timestamp">
+                                        {new Date(messages[0][2]).toLocaleDateString()}
+                                    </div>
                                 </div>
-                                <div className="conversation-timestamp">
-                                    {new Date(messages[0][2]).toLocaleDateString()}
-                                </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </div>
                 <div className="nalva-main">

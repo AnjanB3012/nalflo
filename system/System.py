@@ -496,9 +496,11 @@ Required JSON:
                     # Create Nalva instance with first message
                     first_msg = next(msg for msg in history if msg["type"] == "user")
                     self.nalvaInstances[username] = Nalva.Nalva(
+                        self.aiAccessToken,
                         username, 
                         first_msg["message"],
-                        first_msg["conversationID"]
+                        first_msg["conversationID"],
+                        self.businessRules
                     )
                     # Add remaining messages
                     for msg in history[1:]:
@@ -1223,7 +1225,7 @@ Required JSON:
         
         # Create or get Nalva instance and get reply
         if username not in self.nalvaInstances:
-            self.nalvaInstances[username] = Nalva.Nalva(username, firstMessage, conversationID)
+            self.nalvaInstances[username] = Nalva.Nalva(self.aiAccessToken, username, firstMessage, conversationID, self.businessRules)
             # Get the conversation history from the Nalva instance
             conversation = self.nalvaInstances[username].getConversationHistoryByID(conversationID)
             # Add messages to system history
@@ -1244,8 +1246,8 @@ Required JSON:
         
         return conversationID
         
-    def sendNalvaMessage(self, conversationID: int, message: str) -> tuple[bool, str]:
-        """Send a message to Nalva and get a reply"""
+    def sendNalvaMessage(self, conversationID: int, message: str) -> bool:
+        """Send a message to Nalva and start processing"""
         try:
             # Find the conversation in the Nalva instance
             username = None
@@ -1255,13 +1257,13 @@ Required JSON:
                     break
             
             if not username:
-                return False, "Conversation not found"
+                return False
             
             # Get the Nalva instance
             nalva_instance = self.nalvaInstances[username]
             
-            # Send message and get reply
-            reply = nalva_instance.newMessage(message, conversationID)
+            # Send message and start processing
+            nalva_instance.newMessage(message, conversationID)
             
             # Update the conversation history in the system
             if username in self.conversationHistory and str(conversationID) in self.conversationHistory[username]:
@@ -1269,35 +1271,44 @@ Required JSON:
                 self.conversationHistory[username][str(conversationID)].append(
                     ["user", message, datetime.now(timezone.utc).isoformat()]
                 )
-                # Add Nalva's reply
-                self.conversationHistory[username][str(conversationID)].append(
-                    ["nalva", reply, datetime.now(timezone.utc).isoformat()]
-                )
             
-            return True, reply
+            return True
         except Exception as e:
             print(f"Error sending message to Nalva: {str(e)}")
-            return False, str(e)
-        
-    def replyByNalva(self, conversationID: int, message: str) -> bool:
-        """
-        Adds Nalva's reply to an existing conversation
-        Args:
-            conversationID (int): The ID of the conversation
-            message (str): Nalva's reply message
-        Returns:
-            bool: True if reply was added successfully, False otherwise
-        """
-        # Find the conversation
-        for username, conversations in self.conversationHistory.items():
-            if str(conversationID) in conversations:
-                # Add Nalva's reply to system history
-                conversations[str(conversationID)].append(
-                    ["nalva", message, datetime.now(timezone.utc).isoformat()]
-                )
-                return True
-        return False
-        
+            return False
+
+    def getNalvaResponse(self, conversationID: int) -> dict:
+        """Get the latest response from Nalva for a conversation"""
+        try:
+            # Find the conversation in the Nalva instance
+            username = None
+            for user, nalva_instance in self.nalvaInstances.items():
+                if nalva_instance.getLatestConversationID() == conversationID:
+                    username = user
+                    break
+            
+            if not username:
+                return None
+            
+            # Get the Nalva instance
+            nalva_instance = self.nalvaInstances[username]
+            
+            # Get the latest response
+            response = nalva_instance.getLatestResponse()
+            
+            if response:
+                # Update the conversation history in the system
+                if username in self.conversationHistory and str(conversationID) in self.conversationHistory[username]:
+                    # Add Nalva's reply
+                    self.conversationHistory[username][str(conversationID)].append(
+                        ["nalva", response["message"], response["timestamp"]]
+                    )
+            
+            return response
+        except Exception as e:
+            print(f"Error getting response from Nalva: {str(e)}")
+            return None
+
     def getConversationHistory(self, username: str) -> dict:
         """
         Gets the conversation history for a user

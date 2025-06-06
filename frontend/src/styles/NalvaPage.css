@@ -1,14 +1,17 @@
 .nalva-page {
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f5f5f5;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .nalva-container {
     display: flex;
     flex: 1;
     height: calc(100vh - 64px); /* Subtract navbar height */
+    overflow: hidden;
+    min-height: 0; /* Allow container to shrink */
 }
 
 .nalva-sidebar {
@@ -17,6 +20,7 @@
     border-right: 1px solid #e0e0e0;
     display: flex;
     flex-direction: column;
+    height: 100%; /* Ensure sidebar takes full height */
 }
 
 .sidebar-header {
@@ -93,6 +97,8 @@
     flex-direction: column;
     padding: 20px;
     overflow: hidden;
+    height: 100%;
+    min-height: 0; /* Allow main content to shrink */
 }
 
 .nalva-header {
@@ -102,6 +108,7 @@
     background-color: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .nalva-header h1 {
@@ -123,6 +130,8 @@
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    min-height: 0; /* Allow content to shrink */
+    max-height: calc(100vh - 200px); /* Limit maximum height */
 }
 
 .loading-message,

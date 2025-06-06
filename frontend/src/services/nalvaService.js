@@ -54,4 +54,22 @@ export const getConversationHistory = async (cookieToken) => {
         console.error('Error fetching conversation history:', error);
         throw error.response?.data || { message: 'Failed to fetch conversation history' };
     }
+};
+
+// Get response for a conversation
+export const getResponse = async (cookieToken, conversationId) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/getResponse`, {
+            cookie_token: cookieToken,
+            conversation_id: conversationId
+        });
+        if (response.data.message === "Success") {
+            return response.data;
+        } else {
+            throw new Error(response.data.message || 'Failed to get response');
+        }
+    } catch (error) {
+        console.error('Error getting response:', error);
+        throw error.response?.data || { message: 'Failed to get response' };
+    }
 }; 
