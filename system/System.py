@@ -223,10 +223,10 @@ Required JSON:
             ),
             API.API(
                 "Fetch User",
-                """Retrieves a specific user by username. Returns user object with details.
+                """Retrieves a specific user by username(Not user's name but username@domain.com). Returns user object with details. Note: The username is case sensitive, and do not use this api to fetch users by name, use the getSystemUsers api instead.
 Required JSON:
 {
-    "username": "string (required)"
+    "username": "string (required) - username@domain.com"
 }""",
                 "/ai/fetchUser",
                 "None"
@@ -279,7 +279,8 @@ Required JSON:
     "taskName": "string (required)",
     "taskDescription": "string (required)",
     "taskStatus": "boolean (required)",
-    "assignees": ["string (required)"] - List of usernames to assign the task to
+    "assignees": ["string (required)"] - List of usernames to assign the task to(be specific, do not use vague information like "John" or "Jane", use the getSystemUsers api to fetch the user's username),
+    "creator": "string (required) - username@domain.com"
 }""",
                 "/ai/createTask",
                 "None"
@@ -486,7 +487,8 @@ Required JSON:
         else:
             self.conversationHistory = {}
             
-        # Load Nalva instances
+        business_rules_text = root.find("BusinessRules").text
+        self.businessRules = business_rules_text.split(',') if business_rules_text else []
         nalva_element = root.find("NalvaInstances")
         if nalva_element is not None:
             for user_element in nalva_element.findall("User"):
@@ -500,7 +502,8 @@ Required JSON:
                         username, 
                         first_msg["message"],
                         first_msg["conversationID"],
-                        self.businessRules
+                        self.businessRules,
+                        True
                     )
                     # Add remaining messages
                     for msg in history[1:]:
@@ -509,9 +512,8 @@ Required JSON:
                                 msg["message"],
                                 msg["conversationID"]
                             )
-
-        business_rules_text = root.find("BusinessRules").text
-        self.businessRules = business_rules_text.split(',') if business_rules_text else []
+        for username, nalva_instance in self.nalvaInstances.items():
+            nalva_instance.setupMode = False
         for tempRole_loop in root.find("Roles").findall("Role"):
             tempRole = Role.Role(
                 roleTitle=tempRole_loop.get("Title"),

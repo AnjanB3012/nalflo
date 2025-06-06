@@ -175,6 +175,7 @@ const Management = () => {
                     IAMPermission={permissions?.iam} 
                     apisPermission={permissions?.development}
                     managementPermission={permissions?.management}
+                    nalvaPermission={permissions?.nalva}
                 />
                 <div className="loading-message">
                     <h2>Loading...</h2>
@@ -190,6 +191,7 @@ const Management = () => {
                 IAMPermission={permissions?.iam} 
                 apisPermission={permissions?.development}
                 managementPermission={permissions?.management}
+                nalvaPermission={permissions?.nalva}
             />
             <div className="main-content">
                 <h1>Business Rules Management</h1>

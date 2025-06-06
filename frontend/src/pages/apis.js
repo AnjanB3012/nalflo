@@ -225,6 +225,7 @@ function API()
                     IAMPermission={permissions?.iam} 
                     apisPermission={permissions?.development}
                     managementPermission={permissions?.management}
+                    nalvaPermission={permissions?.nalva}
                 />
                 <div className="loading-message">
                     <h2>Loading...</h2>
@@ -240,6 +241,7 @@ function API()
                 IAMPermission={permissions?.iam} 
                 apisPermission={permissions?.development}
                 managementPermission={permissions?.management}
+                nalvaPermission={permissions?.nalva}
             />
             <h1 className="api-title">API Engine</h1>
             <div className="card-container">

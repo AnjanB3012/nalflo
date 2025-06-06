@@ -147,6 +147,8 @@ def fetchUser():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         user = thisSystem.getUser(data.get('username'))
+        if user is None:
+            return jsonify({"message": "User not found! If this is a user's name, use the getSystemUsers api instead."})
         return jsonify({"message": "Success", "user": user.toDict()})
     else:
         return jsonify({"message": "Failed"})
@@ -196,10 +198,15 @@ def createTask():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
-        tempTask = thisSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
-        assignees = data.get('assignees')
-        for assignee in assignees:
-            thisSystem.assignUserToTask(assignee, tempTask.getTaskId())
+        creator = data.get('creator')
+        if not creator:
+            return jsonify({"message": "Failed", "error": "Creator is required"}), 400
+            
+        creatorUser = thisSystem.getUser(creator)
+        if not creatorUser:
+            return jsonify({"message": "Failed", "error": "Creator user not found"}), 400
+            
+        tempTask = thisSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('assignees'), creatorUser=creatorUser)
         return jsonify({"message": "Success", "taskId": tempTask.getTaskId()})
     else:
         return jsonify({"message": "Failed"})

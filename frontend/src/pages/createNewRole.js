@@ -9,9 +9,12 @@ function CreateNewRole() {
     const [roleName, setRoleName] = useState("");
     const [roleDescription, setRoleDescription] = useState("");
     const [rolePermissions, setRolePermissions] = useState({
-        home: false,
+        home: true,
         iam: false,
-        AssignToAll: false
+        AssignToAll: false,
+        development: false,
+        management: false,
+        nalva: true
     });
     const navigate = useNavigate();
 
@@ -148,8 +151,13 @@ function CreateNewRole() {
                                         onChange={() => handlePermissionChange(permission)}
                                         style={{ width: "16px", height: "16px" }}
                                     />
-                                    <label style={{ textTransform: "capitalize" }}>
-                                        {permission}
+                                    <label style={{ textTransform: "none" }}>
+                                        {permission === "AssignToAll" ? "Assign To All" : 
+                                         permission === "home" ? "Home" :
+                                         permission === "iam" ? "IAM" :
+                                         permission === "development" ? "Development" :
+                                         permission === "management" ? "Management" :
+                                         permission === "nalva" ? "Nalva" : permission}
                                     </label>
                                 </div>
                             ))}

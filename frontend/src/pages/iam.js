@@ -132,6 +132,7 @@ function IAM() {
                     IAMPermission={permissions?.iam} 
                     apisPermission={permissions?.development}
                     managementPermission={permissions?.management}
+                    nalvaPermission={permissions?.nalva}
                 />
                 <div className="error-message">
                     <h2>Something went wrong</h2>
@@ -165,6 +166,7 @@ function IAM() {
                 IAMPermission={permissions?.iam} 
                 apisPermission={permissions?.development}
                 managementPermission={permissions?.management}
+                nalvaPermission={permissions?.nalva}
             />
             <h1 className="iam-title">Identity and Access Management</h1>
             <div className="card-container">
