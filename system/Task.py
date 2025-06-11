@@ -3,7 +3,7 @@ import system.User as User
 import system.Task as Task
 
 class Task:
-    def __init__(self, taskId: int ,titleName: str, description: str, creationTimeStamp: datetime, assignedUsers, creatorUser: User,status: bool=True, previousTask: list[Task]=[]):
+    def __init__(self, taskId: int, titleName: str, description: str, creationTimeStamp: datetime, assignedUsers, creatorUser: User, status: bool=True, previousTask: list[Task]=None):
         self.taskId = taskId
         self.title = titleName
         self.description = description
@@ -11,7 +11,7 @@ class Task:
         self.assignedUsers = assignedUsers
         self.creatorUser = creatorUser
         self.status = status
-        self.previousTask = previousTask
+        self.previousTask = previousTask if previousTask is not None else []
 
     def aiPass(self) -> str:
         usersStr = ""
