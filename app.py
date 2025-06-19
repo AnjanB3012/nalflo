@@ -101,7 +101,7 @@ def getSystemUsers():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         users = thisSystem.getSysUsers()
-        return jsonify({"message": "Success", "users": [user.toDict() for user in users]})
+        return jsonify({"message": "Success", "users": [str(user) for user in users]})
     else:
         return jsonify({"message": "Failed"})
     

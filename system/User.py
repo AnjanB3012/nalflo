@@ -146,6 +146,7 @@ class User:
             str: The username, role, and groups of the user
         """
         returningString = f"<username>{self.userName}</username>"
+        returningString += f"<name>{self.name}</name>"
         returningString += f"""
         <User_Role_Info>
         {str(self.roleInfo)}
@@ -168,7 +169,8 @@ class User:
             "password": self.password,
             "roleInfo": self.getRole().getDetails()[0],
             "groups": [group.getDetails()[0] for group in self.groups],
-            "name": self.name
+            "name": self.name,
+            "tasks": [task.toDict() for task in self.tasks]
         }
     
     def removeFromGroup(self, group: Group):
