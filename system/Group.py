@@ -15,7 +15,7 @@ class Group:
         getDetails() -> list[str]: Returns the title and description of the group
         __str__() -> str: Returns the title and description
     """
-    def __init__(self,title:str, description: str, users = []):
+    def __init__(self, title: str, description: str, users=None):
         """
         Initializes the Group object
         Args:
@@ -25,7 +25,7 @@ class Group:
         """
         self.title = title
         self.description = description
-        self.users = users
+        self.users = users if users is not None else []
     
     def getUsers(self):
         """

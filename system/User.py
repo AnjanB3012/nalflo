@@ -20,7 +20,7 @@ class User:
         addToGroup(newGroup:Group): Adds the user to a group
         __str__() -> str: Returns the username, role, and groups of the user
     """
-    def __init__(self, userName: str, password: str, roleinfo: Role, groups=[], tasks=[], name: str=""):
+    def __init__(self, userName: str, password: str, roleinfo: Role, groups=None, tasks=None, name: str=""):
         """
         Initializes the User object
         Args:
@@ -32,8 +32,8 @@ class User:
         self.userName = userName
         self.password = password
         self.roleInfo = roleinfo
-        self.groups = groups
-        self.tasks = tasks
+        self.groups = groups if groups is not None else []
+        self.tasks = tasks if tasks is not None else []
         self.name = name
     
     def getUserName(self) -> str:
@@ -146,6 +146,7 @@ class User:
             str: The username, role, and groups of the user
         """
         returningString = f"<username>{self.userName}</username>"
+        returningString += f"<name>{self.name}</name>"
         returningString += f"""
         <User_Role_Info>
         {str(self.roleInfo)}
@@ -168,7 +169,8 @@ class User:
             "password": self.password,
             "roleInfo": self.getRole().getDetails()[0],
             "groups": [group.getDetails()[0] for group in self.groups],
-            "name": self.name
+            "name": self.name,
+            "tasks": [task.toDict() for task in self.tasks]
         }
     
     def removeFromGroup(self, group: Group):

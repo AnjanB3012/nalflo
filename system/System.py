@@ -584,7 +584,7 @@ Required JSON:
                 creationTimeStamp=datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
                 assignedUsers=usersAssigned,
                 creatorUser=creator_user,
-                status=bool(tempTask_loop.find("Status").text),
+                status=tempTask_loop.find("Status").text.lower() == "true",
                 previousTask=[]  # Will be populated in second pass
             )
             
@@ -641,7 +641,7 @@ Required JSON:
         """
         return findUserByUserName(username,self.users)
 
-    def createUser(self,username:str, password:str, roleName:str, groupNames:list[str]=[], name:str=""):
+    def createUser(self, username: str, password: str, roleName: str, groupNames: list[str] | None = None, name: str = ""):
         """
         Method to create a user
         Args:
@@ -650,8 +650,10 @@ Required JSON:
             roleName (str): The name of the role of the user
             groupNames (list[str]): The names of the groups the user is in
         """
-        tempUser = User.User(username,password,findRoleByTitle(roleName,self.roles),[],[],name)
+        tempUser = User.User(username, password, findRoleByTitle(roleName, self.roles), [], [], name)
         self.users.append(tempUser)
+        if groupNames is None:
+            groupNames = []
         for tempGroup in groupNames:
             tempGroup1 = findGroupByName(tempGroup,self.groups)
             if tempGroup1:
@@ -944,7 +946,7 @@ Required JSON:
         # Remove group from system
         self.groups.remove(group)
 
-    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask=[]):
+    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task.Task] | None = None):
         """
         Method to create a new task
         Args:
@@ -968,7 +970,9 @@ Required JSON:
             tempUser = findUserByUserName(assignee, self.users)
             if tempUser:
                 assignedUsers.append(tempUser)
-        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        if previousTask is None:
+            previousTask = []
+        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
         self.tasks.append(tempTask)
         # Add task to creator's task list
         creatorUser.addTask(tempTask)
