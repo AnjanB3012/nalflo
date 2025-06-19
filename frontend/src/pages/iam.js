@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/navbar";
+import Navbar from "../components/Navbar";
 import ErrorPage from "./ErrorPage";
 import "../styles/iam.css";
 
@@ -132,6 +132,7 @@ function IAM() {
                     IAMPermission={permissions?.iam} 
                     apisPermission={permissions?.development}
                     managementPermission={permissions?.management}
+                    nalvaPermission={permissions?.nalva}
                 />
                 <div className="error-message">
                     <h2>Something went wrong</h2>
@@ -149,6 +150,7 @@ function IAM() {
                     IAMPermission={permissions?.iam} 
                     apisPermission={permissions?.development}
                     managementPermission={permissions?.management}
+                    nalvaPermission={permissions?.nalva}
                 />
                 <div className="loading-message">
                     <h2>Loading...</h2>
@@ -164,6 +166,7 @@ function IAM() {
                 IAMPermission={permissions?.iam} 
                 apisPermission={permissions?.development}
                 managementPermission={permissions?.management}
+                nalvaPermission={permissions?.nalva}
             />
             <h1 className="iam-title">Identity and Access Management</h1>
             <div className="card-container">

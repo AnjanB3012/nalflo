@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 import Editor from "@monaco-editor/react";
-import Navbar from "../components/navbar";
+import Navbar from "../components/Navbar";
 
 function ViewThread() {
     const { threadName } = useParams();

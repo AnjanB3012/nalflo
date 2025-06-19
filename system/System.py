@@ -13,6 +13,8 @@ from taskQueue import processTask
 import queue
 import threading
 import time
+from datetime import datetime, timezone, timedelta
+import Nalva
 
 
 
@@ -122,8 +124,12 @@ class System:
         xml_filename = "instance.xml"
         if not os.path.exists(xml_filename):
             self.setUpStatus = False
+            self.conversationHistory = {}  # Initialize empty conversation history
+            self.nalvaInstances = {}  # Dictionary to store Nalva instances for each user
         else:
             self.setUpStatus = True
+            self.conversationHistory = {}  # Initialize empty conversation history
+            self.nalvaInstances = {}  # Dictionary to store Nalva instances for each user
             self.loadInstance()
             self.taskQueue = queue.Queue()
             worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
@@ -155,13 +161,14 @@ class System:
         self.tasks = []
         self.apis = []
         self.threadAPIs = []
-        self.permissions = ["home","iam","AssignToAll", "development", "management"]
+        self.permissions = ["home","iam","AssignToAll", "development", "management", "nalva"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
             "home":True,
             "iam": True,
             "AssignToAll": True,
             "development": True,
-            "management": True
+            "management": True,
+            "nalva": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
         tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
@@ -216,10 +223,10 @@ Required JSON:
             ),
             API.API(
                 "Fetch User",
-                """Retrieves a specific user by username. Returns user object with details.
+                """Retrieves a specific user by username(Not user's name but username@domain.com). Returns user object with details. Note: The username is case sensitive, and do not use this api to fetch users by name, use the getSystemUsers api instead.
 Required JSON:
 {
-    "username": "string (required)"
+    "username": "string (required) - username@domain.com"
 }""",
                 "/ai/fetchUser",
                 "None"
@@ -272,7 +279,8 @@ Required JSON:
     "taskName": "string (required)",
     "taskDescription": "string (required)",
     "taskStatus": "boolean (required)",
-    "assignees": ["string (required)"] - List of usernames to assign the task to
+    "assignees": ["string (required)"] - List of usernames to assign the task to(be specific, do not use vague information like "John" or "Jane", use the getSystemUsers api to fetch the user's username),
+    "creator": "string (required) - username@domain.com"
 }""",
                 "/ai/createTask",
                 "None"
@@ -339,7 +347,7 @@ Required JSON:
         xml_filename = "instance.xml"
         if os.path.exists(xml_filename):
             old_xml_path = xml_filename 
-            os.rename(old_xml_path, f"instance-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xml")
+            os.rename(old_xml_path, f"instance-{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.xml")
         xml_filename = "instance.xml"
         with open(xml_filename, "w") as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -436,6 +444,19 @@ Required JSON:
             thread_api_tab.set("String", threadAPIVal.getThreadString())
         businessRules_save = ET.SubElement(root, "BusinessRules")
         businessRules_save.text = ','.join(self.businessRules)
+        
+        # Save conversation history
+        conversations_save = ET.SubElement(root, "Conversations")
+        conversations_save.text = json.dumps(self.conversationHistory)
+        
+        # Save Nalva instances
+        nalva_save = ET.SubElement(root, "NalvaInstances")
+        for username, nalva_instance in self.nalvaInstances.items():
+            user_tab = ET.SubElement(nalva_save, "User")
+            user_tab.set("Username", username)
+            history = ET.SubElement(user_tab, "ConversationHistory")
+            history.text = json.dumps(nalva_instance.getConversationHistory())
+        
         tree = ET.ElementTree(root)
         with open(xml_filename, "wb") as file:
             tree.write(file, encoding="utf-8", xml_declaration=True)
@@ -458,8 +479,41 @@ Required JSON:
         self.aiAccessToken = root.find("aiAccessToken").text
         self.apis = []
         self.threadAPIs = []
+        
+        # Load conversation history
+        conversations_element = root.find("Conversations")
+        if conversations_element is not None and conversations_element.text:
+            self.conversationHistory = json.loads(conversations_element.text)
+        else:
+            self.conversationHistory = {}
+            
         business_rules_text = root.find("BusinessRules").text
         self.businessRules = business_rules_text.split(',') if business_rules_text else []
+        nalva_element = root.find("NalvaInstances")
+        if nalva_element is not None:
+            for user_element in nalva_element.findall("User"):
+                username = user_element.get("Username")
+                history = json.loads(user_element.find("ConversationHistory").text)
+                if history:
+                    # Create Nalva instance with first message
+                    first_msg = next(msg for msg in history if msg["type"] == "user")
+                    self.nalvaInstances[username] = Nalva.Nalva(
+                        self.aiAccessToken,
+                        username, 
+                        first_msg["message"],
+                        first_msg["conversationID"],
+                        self.businessRules,
+                        True
+                    )
+                    # Add remaining messages
+                    for msg in history[1:]:
+                        if msg["type"] == "user":
+                            self.nalvaInstances[username].newMessage(
+                                msg["message"],
+                                msg["conversationID"]
+                            )
+        for username, nalva_instance in self.nalvaInstances.items():
+            nalva_instance.setupMode = False
         for tempRole_loop in root.find("Roles").findall("Role"):
             tempRole = Role.Role(
                 roleTitle=tempRole_loop.get("Title"),
@@ -499,7 +553,7 @@ Required JSON:
             file = File.File(
                 name=tempFile_loop.get("name"),
                 size=int(tempFile_loop.get("size")),
-                modified=datetime.datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
+                modified=datetime.strptime(tempFile_loop.get("modified"), '%Y-%m-%d %H:%M:%S')
             )
             self.sysFiles.append(file)
 
@@ -527,7 +581,7 @@ Required JSON:
                 taskId=int(tempTask_loop.get("TaskID")),
                 titleName=tempTask_loop.find("Title").text,
                 description=tempTask_loop.find("Description").text,
-                creationTimeStamp=datetime.datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
+                creationTimeStamp=datetime.fromisoformat(tempTask_loop.find("CreationTimeStamp").text),
                 assignedUsers=usersAssigned,
                 creatorUser=creator_user,
                 status=tempTask_loop.find("Status").text.lower() == "true",
@@ -907,7 +961,7 @@ Required JSON:
             if (existing_task.getTitle() == taskTitle and 
                 existing_task.getDescription() == taskDescription and
                 existing_task.getCreatorUser() == creatorUser and
-                existing_task.getCreationTimeStamp() > datetime.datetime.now() - datetime.timedelta(minutes=5)):
+                existing_task.getCreationTimeStamp() > datetime.now() - timedelta(minutes=5)):
                 raise ValueError("A similar task was created recently. Please wait a few minutes before creating another task.")
         
         taskId = findUniqueTaskID(self.tasks)
@@ -1155,3 +1209,118 @@ Required JSON:
             User: The user with the given username, None if not found
         """
         return findUserByUserName(username, self.users)
+
+    def newNalvaConversation(self, username: str, firstMessage: str) -> int:
+        """
+        Creates a new conversation with Nalva
+        Args:
+            username (str): The username of the user
+            firstMessage (str): The first message from the user
+        Returns:
+            int: The conversation ID, -1 if user not found
+        """
+        if not self.findUserByUserName(username):
+            return -1
+            
+        # Initialize user's conversation history if not exists
+        if username not in self.conversationHistory:
+            self.conversationHistory[username] = {}
+            
+        # Generate new conversation ID
+        conversationID = len(self.conversationHistory[username]) + 1
+        
+        # Create or get Nalva instance and get reply
+        if username not in self.nalvaInstances:
+            self.nalvaInstances[username] = Nalva.Nalva(self.aiAccessToken, username, firstMessage, conversationID, self.businessRules)
+            # Get the conversation history from the Nalva instance
+            conversation = self.nalvaInstances[username].getConversationHistoryByID(conversationID)
+            # Add messages to system history
+            self.conversationHistory[username][str(conversationID)] = [
+                [msg["type"], msg["message"], msg["timestamp"]] for msg in conversation
+            ]
+        else:
+            # Add first message to system history
+            self.conversationHistory[username][str(conversationID)] = [
+                ["user", firstMessage, datetime.now(timezone.utc).isoformat()]
+            ]
+            # Get Nalva's reply
+            reply = self.nalvaInstances[username].newMessage(firstMessage, conversationID)
+            # Add Nalva's reply to system history
+            self.conversationHistory[username][str(conversationID)].append(
+                ["nalva", reply, datetime.now(timezone.utc).isoformat()]
+            )
+        
+        return conversationID
+        
+    def sendNalvaMessage(self, conversationID: int, message: str) -> bool:
+        """Send a message to Nalva and start processing"""
+        try:
+            # Find the conversation in the Nalva instance
+            username = None
+            for user, nalva_instance in self.nalvaInstances.items():
+                if nalva_instance.getLatestConversationID() == conversationID:
+                    username = user
+                    break
+            
+            if not username:
+                return False
+            
+            # Get the Nalva instance
+            nalva_instance = self.nalvaInstances[username]
+            
+            # Send message and start processing
+            nalva_instance.newMessage(message, conversationID)
+            
+            # Update the conversation history in the system
+            if username in self.conversationHistory and str(conversationID) in self.conversationHistory[username]:
+                # Add user's message
+                self.conversationHistory[username][str(conversationID)].append(
+                    ["user", message, datetime.now(timezone.utc).isoformat()]
+                )
+            
+            return True
+        except Exception as e:
+            print(f"Error sending message to Nalva: {str(e)}")
+            return False
+
+    def getNalvaResponse(self, conversationID: int) -> dict:
+        """Get the latest response from Nalva for a conversation"""
+        try:
+            # Find the conversation in the Nalva instance
+            username = None
+            for user, nalva_instance in self.nalvaInstances.items():
+                if nalva_instance.getLatestConversationID() == conversationID:
+                    username = user
+                    break
+            
+            if not username:
+                return None
+            
+            # Get the Nalva instance
+            nalva_instance = self.nalvaInstances[username]
+            
+            # Get the latest response
+            response = nalva_instance.getLatestResponse()
+            
+            if response:
+                # Update the conversation history in the system
+                if username in self.conversationHistory and str(conversationID) in self.conversationHistory[username]:
+                    # Add Nalva's reply
+                    self.conversationHistory[username][str(conversationID)].append(
+                        ["nalva", response["message"], response["timestamp"]]
+                    )
+            
+            return response
+        except Exception as e:
+            print(f"Error getting response from Nalva: {str(e)}")
+            return None
+
+    def getConversationHistory(self, username: str) -> dict:
+        """
+        Gets the conversation history for a user
+        Args:
+            username (str): The username of the user
+        Returns:
+            dict: The conversation history for the user, empty dict if user not found
+        """
+        return self.conversationHistory.get(username, {})

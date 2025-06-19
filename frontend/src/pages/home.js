@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/navbar';
+import Navbar from '../components/Navbar';
 import '../styles/home.css';
 
 function Home() {
@@ -142,6 +142,7 @@ function Home() {
                 IAMPermission={permissions?.iam} 
                 apisPermission={permissions?.development}
                 managementPermission={permissions?.management}
+                nalvaPermission={permissions?.nalva}
             />
             <div className="main-content">
                 <div className="filters-container">

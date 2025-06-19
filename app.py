@@ -147,6 +147,8 @@ def fetchUser():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         user = thisSystem.getUser(data.get('username'))
+        if user is None:
+            return jsonify({"message": "User not found! If this is a user's name, use the getSystemUsers api instead."})
         return jsonify({"message": "Success", "user": user.toDict()})
     else:
         return jsonify({"message": "Failed"})
@@ -196,10 +198,15 @@ def createTask():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
-        tempTask = thisSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
-        assignees = data.get('assignees')
-        for assignee in assignees:
-            thisSystem.assignUserToTask(assignee, tempTask.getTaskId())
+        creator = data.get('creator')
+        if not creator:
+            return jsonify({"message": "Failed", "error": "Creator is required"}), 400
+            
+        creatorUser = thisSystem.getUser(creator)
+        if not creatorUser:
+            return jsonify({"message": "Failed", "error": "Creator user not found"}), 400
+            
+        tempTask = thisSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('assignees'), creatorUser=creatorUser)
         return jsonify({"message": "Success", "taskId": tempTask.getTaskId()})
     else:
         return jsonify({"message": "Failed"})
@@ -1243,6 +1250,115 @@ def viewThread():
                 "thread": thread.toDict()
             }
             return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/newConversation', methods=['POST'])
+def newNalvaConversation():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            first_message = data.get('message')
+            if not first_message:
+                return jsonify({"message": "Message is required"})
+            
+            try:
+                conversation_id = thisSystem.newNalvaConversation(username, first_message)
+                return jsonify({
+                    "message": "Success",
+                    "conversation_id": conversation_id
+                })
+            except Exception as e:
+                return jsonify({"message": f"Failed to create conversation: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/sendMessage', methods=['POST'])
+def sendNalvaMessage():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            conversation_id = data.get('conversation_id')
+            message = data.get('message')
+            
+            if not conversation_id or not message:
+                return jsonify({"message": "Conversation ID and message are required"})
+            
+            try:
+                # Start message processing and return immediately
+                success = thisSystem.sendNalvaMessage(conversation_id, message)
+                if success:
+                    return jsonify({
+                        "message": "Success",
+                        "status": "processing"
+                    })
+                else:
+                    return jsonify({"message": "Failed to send message"})
+            except Exception as e:
+                return jsonify({"message": f"Failed to send message: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/getResponse', methods=['POST'])
+def getNalvaResponse():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            conversation_id = data.get('conversation_id')
+            
+            if not conversation_id:
+                return jsonify({"message": "Conversation ID is required"})
+            
+            try:
+                response = thisSystem.getNalvaResponse(conversation_id)
+                if response:
+                    return jsonify({
+                        "message": "Success",
+                        "response": response
+                    })
+                else:
+                    return jsonify({
+                        "message": "Success",
+                        "status": "processing"
+                    })
+            except Exception as e:
+                return jsonify({"message": f"Failed to get response: {str(e)}"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/nalva/getConversationHistory', methods=['POST'])
+def getNalvaConversationHistory():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['nalva']:
+            try:
+                history = thisSystem.getConversationHistory(username)
+                return jsonify({
+                    "message": "Success",
+                    "conversations": history
+                })
+            except Exception as e:
+                return jsonify({"message": f"Failed to get conversation history: {str(e)}"})
         else:
             return jsonify({"message": "Permission Denied"})
     else:
