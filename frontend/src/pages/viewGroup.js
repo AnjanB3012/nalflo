@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import Navbar from "../components/navbar.jsx";
 import ErrorPage from "./ErrorPage";
 import "../styles/iam.css";
 
@@ -288,167 +288,172 @@ function ViewGroup() {
 
     if (error) {
         return (
-            <div className="p-6 max-w-2xl mx-auto">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <strong className="font-bold">Error: </strong>
-                    <span className="block sm:inline">{errorMessage}</span>
+            <div><Navbar />
+                <div className="p-6 max-w-2xl mx-auto">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                        <strong className="font-bold">Error: </strong>
+                        <span className="block sm:inline">{errorMessage}</span>
+                    </div>
                 </div>
             </div>
         );
     }
 
     if (!group) {
-        return <div className="p-6 max-w-2xl mx-auto">Loading...</div>;
+        return <div><Navbar /><div className="p-6 max-w-2xl mx-auto">Loading...</div></div>;
     }
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            <div className="mb-8">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-4xl font-bold mb-2">{group.title}</h1>
-                        <p className="text-gray-600 text-lg">{group.description}</p>
-                    </div>
-                    <button
-                        onClick={() => setDeleteDialogOpen(true)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-                        disabled={isLoading}
-                    >
-                        Delete Group
-                    </button>
-                </div>
-            </div>
-
-            <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">Users in Group</h2>
-                    <button
-                        onClick={handleAddUserClick}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                    >
-                        Add User
-                    </button>
-                </div>
-                <div className="space-y-2">
-                    {group.users && group.users.length > 0 ? (
-                        group.users.map((username, index) => (
-                            <div key={`user-${username}-${index}`} className="flex items-center justify-between bg-gray-100 p-3 rounded">
-                                <div>
-                                    <span className="font-semibold">{username}</span>
-                                </div>
-                                <button
-                                    onClick={() => handleRemoveUser(username)}
-                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                                    disabled={isLoading}
-                                >
-                                    Remove
-                                </button>
-                            </div>
-                        ))
-                    ) : (
-                        <div key="no-users" className="text-gray-500 text-center py-4">
-                            No users in this group
+        <div>
+            <Navbar />
+            <div className="p-6 max-w-2xl mx-auto">
+                <div className="mb-8">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-4xl font-bold mb-2">{group.title}</h1>
+                            <p className="text-gray-600 text-lg">{group.description}</p>
                         </div>
-                    )}
-                </div>
-            </div>
-
-            {dialogOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-96">
-                        <h2 className="text-xl font-semibold mb-4">Add User to {group.title}</h2>
-                        {statusMessage && (
-                            <div key="status-message" className={`p-3 mb-4 rounded ${
-                                statusMessage.includes("success") 
-                                    ? "bg-green-100 text-green-700" 
-                                    : "bg-red-100 text-red-700"
-                            }`}>
-                                {statusMessage}
-                            </div>
-                        )}
-                        <div className="mb-4">
-                            <input
-                                type="text"
-                                placeholder="Search users..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                        <select
-                            value={selectedUser}
-                            onChange={(e) => setSelectedUser(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <button
+                            onClick={() => setDeleteDialogOpen(true)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
                             disabled={isLoading}
                         >
-                            <option key="default" value="">Select a user</option>
-                            {filteredUsers && filteredUsers.length > 0 ? (
-                                filteredUsers
-                                    .map((user, index) => (
-                                        <option 
-                                            key={`option-${user.userName}-${index}`} 
-                                            value={user.userName}
-                                        >
-                                            {user.userName} {user.name ? `(${user.name})` : ''}
-                                        </option>
-                                    ))
-                            ) : (
-                                <option key="no-users-available" value="" disabled>No users available</option>
-                            )}
-                        </select>
-                        <div className="flex justify-end space-x-2">
-                            <button
-                                onClick={handleDialogClose}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleAddUser}
-                                disabled={!selectedUser || isLoading}
-                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? "Adding..." : "Add User"}
-                            </button>
-                        </div>
+                            Delete Group
+                        </button>
                     </div>
                 </div>
-            )}
 
-            {deleteDialogOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-96">
-                        <h2 className="text-xl font-semibold mb-4">Delete Group</h2>
-                        <p className="mb-4">Are you sure you want to delete the group "{group.title}"? This action cannot be undone.</p>
-                        {statusMessage && (
-                            <div className={`p-3 mb-4 rounded ${
-                                statusMessage.includes("success") 
-                                    ? "bg-green-100 text-green-700" 
-                                    : "bg-red-100 text-red-700"
-                            }`}>
-                                {statusMessage}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-semibold">Users in Group</h2>
+                        <button
+                            onClick={handleAddUserClick}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                        >
+                            Add User
+                        </button>
+                    </div>
+                    <div className="space-y-2">
+                        {group.users && group.users.length > 0 ? (
+                            group.users.map((username, index) => (
+                                <div key={`user-${username}-${index}`} className="flex items-center justify-between bg-gray-100 p-3 rounded">
+                                    <div>
+                                        <span className="font-semibold">{username}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleRemoveUser(username)}
+                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                                        disabled={isLoading}
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))
+                        ) : (
+                            <div key="no-users" className="text-gray-500 text-center py-4">
+                                No users in this group
                             </div>
                         )}
-                        <div className="flex justify-end space-x-2">
-                            <button
-                                onClick={() => setDeleteDialogOpen(false)}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDeleteGroup}
-                                disabled={isLoading}
-                                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? "Deleting..." : "Delete Group"}
-                            </button>
-                        </div>
                     </div>
                 </div>
-            )}
+
+                {dialogOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-96">
+                            <h2 className="text-xl font-semibold mb-4">Add User to {group.title}</h2>
+                            {statusMessage && (
+                                <div key="status-message" className={`p-3 mb-4 rounded ${
+                                    statusMessage.includes("success") 
+                                        ? "bg-green-100 text-green-700" 
+                                        : "bg-red-100 text-red-700"
+                                }`}>
+                                    {statusMessage}
+                                </div>
+                            )}
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    placeholder="Search users..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <select
+                                value={selectedUser}
+                                onChange={(e) => setSelectedUser(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                disabled={isLoading}
+                            >
+                                <option key="default" value="">Select a user</option>
+                                {filteredUsers && filteredUsers.length > 0 ? (
+                                    filteredUsers
+                                        .map((user, index) => (
+                                            <option 
+                                                key={`option-${user.userName}-${index}`} 
+                                                value={user.userName}
+                                            >
+                                                {user.userName} {user.name ? `(${user.name})` : ''}
+                                            </option>
+                                        ))
+                                ) : (
+                                    <option key="no-users-available" value="" disabled>No users available</option>
+                                )}
+                            </select>
+                            <div className="flex justify-end space-x-2">
+                                <button
+                                    onClick={handleDialogClose}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                    disabled={isLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAddUser}
+                                    disabled={!selectedUser || isLoading}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? "Adding..." : "Add User"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {deleteDialogOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-96">
+                            <h2 className="text-xl font-semibold mb-4">Delete Group</h2>
+                            <p className="mb-4">Are you sure you want to delete the group "{group.title}"? This action cannot be undone.</p>
+                            {statusMessage && (
+                                <div className={`p-3 mb-4 rounded ${
+                                    statusMessage.includes("success") 
+                                        ? "bg-green-100 text-green-700" 
+                                        : "bg-red-100 text-red-700"
+                                }`}>
+                                    {statusMessage}
+                                </div>
+                            )}
+                            <div className="flex justify-end space-x-2">
+                                <button
+                                    onClick={() => setDeleteDialogOpen(false)}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                    disabled={isLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteGroup}
+                                    disabled={isLoading}
+                                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? "Deleting..." : "Delete Group"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

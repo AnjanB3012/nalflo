@@ -7,3 +7,4 @@ requests
 pyhold
 werkzeug
 uuid
+google-genai

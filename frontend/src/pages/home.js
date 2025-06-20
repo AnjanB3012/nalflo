@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/navbar.jsx';
 import '../styles/home.css';
 
 function Home() {
@@ -229,13 +229,13 @@ function Home() {
                                                     {task.status ? 'Open' : 'Closed'}
                                                 </span>
                                             </td>
-                                            <td>{task.creatorUser?.userName || 'Unknown'}</td>
+                                            <td>{task.creatorUser || 'Unknown'}</td>
                                             <td>{new Date(task.creationTimeStamp).toLocaleString()}</td>
                                             <td>
                                                 {(() => {
-                                                    const assignees = task.assignedUsers?.filter(user => user.userName !== task.creatorUser?.userName) || [];
-                                                    const creator = task.creatorUser?.userName;
-                                                    const assigneeList = assignees.map(user => user.userName);
+                                                    const assignees = task.assignedUsers?.filter(userName => userName !== task.creatorUser) || [];
+                                                    const creator = task.creatorUser;
+                                                    const assigneeList = [...assignees];
                                                     if (creator) {
                                                         assigneeList.unshift(`${creator} (Creator)`);
                                                     }

@@ -33,6 +33,7 @@
     border-radius: 15px;
     font-size: 0.9em;
     font-weight: 500;
+    margin-left: 5px;
 }
 
 .status-badge.open {
@@ -43,6 +44,21 @@
 .status-badge.closed {
     background-color: #f8d7da;
     color: #721c24;
+}
+
+.status-badge.current {
+    background-color: #007bff;
+    color: white;
+}
+
+.status-badge.previous {
+    background-color: #6c757d;
+    color: white;
+}
+
+.status-badge.reply {
+    background-color: #28a745;
+    color: white;
 }
 
 .task-info {
@@ -338,6 +354,16 @@
 
 .timeline-task-card.current-task {
     margin-bottom: 30px;
+    border-left: 4px solid #007bff;
+}
+
+.timeline-task-card.previous-task {
+    border-left: 4px solid #6c757d;
+    opacity: 0.8;
+}
+
+.timeline-task-card.reply-task {
+    border-left: 4px solid #28a745;
 }
 
 .timeline-content {
@@ -467,4 +493,10 @@
 .loading-spinner span {
     color: #666;
     font-size: 16px;
+}
+
+.task-type-indicator {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
 } 

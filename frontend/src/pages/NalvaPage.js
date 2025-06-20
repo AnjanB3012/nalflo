@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NalvaChat from '../components/NalvaChat';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/navbar.jsx';
 import { getConversationHistory } from '../services/nalvaService';
 import '../styles/NalvaPage.css';
 

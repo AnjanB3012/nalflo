@@ -19,7 +19,7 @@ class File:
         """
         self.name = name
         self.size = size
-        self.modified = modified if modified else datetime.datetime.now()
+        self.modified = modified if modified else datetime.now()
 
     def toDict(self) -> dict:
         """
@@ -42,4 +42,4 @@ class File:
         if os.path.exists(file_path):
             file_stat = os.stat(file_path)
             self.size = file_stat.st_size
-            self.modified = datetime.datetime.fromtimestamp(file_stat.st_mtime) 
+            self.modified = datetime.fromtimestamp(file_stat.st_mtime) 

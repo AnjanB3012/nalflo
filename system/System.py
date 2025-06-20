@@ -430,6 +430,11 @@ Required JSON:
             for tempTask in taskVal.getPreviousTask():
                 task_prev_task_tab = ET.SubElement(task_prev_tab, "TaskID")
                 task_prev_task_tab.text = str(tempTask.getTaskId())
+            task_reply_tab = ET.SubElement(task_tab, "ReplyTask")
+            if taskVal.getReplyTask():
+                task_reply_tab.text = str(taskVal.getReplyTask().getTaskId())
+            else:
+                task_reply_tab.text = "None"
         apis_save = ET.SubElement(root, "APIs")
         for apiVal in self.apis:
             api_tab = ET.SubElement(apis_save, "API")
@@ -613,6 +618,21 @@ Required JSON:
                 else:
                     print(f"Warning: Previous task {prev_task_id} not found when loading task {task_id}")
             task.previousTask = previousTasks
+
+        # Third pass: Set up reply task relationships
+        for tempTask_loop in root.find("Tasks").findall("Task"):
+            task_id = int(tempTask_loop.get("TaskID"))
+            task = task_map.get(task_id)
+            if not task:
+                continue
+                
+            reply_task_id = tempTask_loop.find("ReplyTask").text
+            if reply_task_id != "None":
+                reply_task = task_map.get(int(reply_task_id))
+                if reply_task:
+                    task.setReplyTask(reply_task)
+                else:
+                    print(f"Warning: Reply task {reply_task_id} not found when loading task {task_id}")
 
         for tempAPI_loop in root.find("APIs").findall("API"):
             tempAPI = API.API(
@@ -972,7 +992,7 @@ Required JSON:
                 assignedUsers.append(tempUser)
         if previousTask is None:
             previousTask = []
-        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.now(), assignedUsers, creatorUser, True, previousTask)
         self.tasks.append(tempTask)
         # Add task to creator's task list
         creatorUser.addTask(tempTask)
@@ -1324,3 +1344,19 @@ Required JSON:
             dict: The conversation history for the user, empty dict if user not found
         """
         return self.conversationHistory.get(username, {})
+
+    def getTasksWithReplies(self) -> list[Task.Task]:
+        """
+        Gets all tasks that have reply tasks
+        Returns:
+            list[Task]: List of tasks that have reply tasks
+        """
+        return [task for task in self.tasks if task.getReplyTask() is not None]
+
+    def getSysTasks(self):
+        """
+        Method to get the tasks in the system
+        Returns:
+            list[Task]: The list of tasks in the system
+        """
+        return self.tasks

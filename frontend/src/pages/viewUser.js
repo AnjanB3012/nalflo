@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 import { Select, MenuItem } from "@mui/material";
 import { TextField } from "@mui/material";
+import Navbar from "../components/navbar.jsx";
 
 function ViewUser() {
     const { userName } = useParams();
@@ -408,166 +409,170 @@ function ViewUser() {
     };
 
     if (error) {
-        return <div className="p-6 max-w-2xl mx-auto">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <strong className="font-bold">Error: </strong>
-                <span className="block sm:inline">{errorMessage}</span>
-            </div>
-        </div>;
+        return <div><Navbar />
+            <div className="p-6 max-w-2xl mx-auto">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">Error: </strong>
+                    <span className="block sm:inline">{errorMessage}</span>
+                </div>
+            </div></div>;
     }
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <h1 className="text-2xl font-bold mb-4">User Details</h1>
-                {user && (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Username:</label>
-                            <p className="text-gray-900">{user.userName}</p>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Name:</label>
-                            <p className="text-gray-900">{user.name}</p>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Role:</label>
-                            <div className="flex items-center space-x-2">
-                                <p className="text-gray-900">{user.roleInfo}</p>
-                                <button
-                                    onClick={handleRoleChange}
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm"
-                                >
-                                    Change Role
-                                </button>
+        <div>
+            <Navbar />
+            <div className="p-6 max-w-2xl mx-auto">
+                <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+                    <h1 className="text-2xl font-bold mb-4">User Details</h1>
+                    {user && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Username:</label>
+                                <p className="text-gray-900">{user.userName}</p>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Name:</label>
+                                <p className="text-gray-900">{user.name}</p>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Role:</label>
+                                <div className="flex items-center space-x-2">
+                                    <p className="text-gray-900">{user.roleInfo}</p>
+                                    <button
+                                        onClick={handleRoleChange}
+                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                    >
+                                        Change Role
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Password:</label>
+                                <div className="flex items-center space-x-2">
+                                    <p className="text-gray-900">••••••••</p>
+                                    <button
+                                        onClick={handlePasswordChange}
+                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                    >
+                                        Change Password
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Groups:</label>
+                                <div className="space-y-2">
+                                    {user.groups && user.groups.map((group, index) => (
+                                        <div key={index} className="flex items-center justify-between">
+                                            <p className="text-gray-900">{group}</p>
+                                            <button
+                                                onClick={() => handleGroupRemove(group)}
+                                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={handleGroupAdd}
+                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm"
+                                    >
+                                        Add to Group
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Password:</label>
-                            <div className="flex items-center space-x-2">
-                                <p className="text-gray-900">••••••••</p>
-                                <button
-                                    onClick={handlePasswordChange}
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm"
-                                >
-                                    Change Password
-                                </button>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2">Groups:</label>
-                            <div className="space-y-2">
-                                {user.groups && user.groups.map((group, index) => (
-                                    <div key={index} className="flex items-center justify-between">
-                                        <p className="text-gray-900">{group}</p>
-                                        <button
-                                            onClick={() => handleGroupRemove(group)}
-                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                ))}
-                                <button
-                                    onClick={handleGroupAdd}
-                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm"
-                                >
-                                    Add to Group
-                                </button>
-                            </div>
+                    )}
+                </div>
+
+                {/* Role Change Dialog */}
+                <Dialog open={dialogOpen} onClose={handleDialogClose}>
+                    <DialogTitle>Change User Role</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Select a new role for the user:
+                        </DialogContentText>
+                        <Select
+                            value={newRole}
+                            onChange={(e) => setNewRole(e.target.value)}
+                            fullWidth
+                        >
+                            {roles.map((role) => (
+                                <MenuItem key={role} value={role}>
+                                    {role}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleDialogClose}>Cancel</Button>
+                        <Button onClick={handleSaveRoleChange} disabled={isLoading}>
+                            {isLoading ? "Saving..." : "Save"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Password Change Dialog */}
+                <Dialog open={passwordDialogOpen} onClose={handlePasswordDialogClose}>
+                    <DialogTitle>Change User Password</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Enter a new password for the user:
+                        </DialogContentText>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="New Password"
+                            type="password"
+                            fullWidth
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handlePasswordDialogClose}>Cancel</Button>
+                        <Button onClick={handleSavePasswordChange} disabled={isLoading}>
+                            {isLoading ? "Saving..." : "Save"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Group Add Dialog */}
+                <Dialog open={groupDialogOpen} onClose={handleGroupDialogClose}>
+                    <DialogTitle>Add User to Group</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Select a group to add the user to:
+                        </DialogContentText>
+                        <Select
+                            value={selectedGroup}
+                            onChange={(e) => setSelectedGroup(e.target.value)}
+                            fullWidth
+                        >
+                            {groups.map((group) => (
+                                <MenuItem key={group.title} value={group.title}>
+                                    {group.title}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleGroupDialogClose}>Cancel</Button>
+                        <Button onClick={handleSaveGroupAdd} disabled={isLoading}>
+                            {isLoading ? "Saving..." : "Save"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {statusMessage && (
+                    <div className="mt-4">
+                        <div className={`p-4 rounded ${
+                            statusMessage.includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}>
+                            {statusMessage}
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Role Change Dialog */}
-            <Dialog open={dialogOpen} onClose={handleDialogClose}>
-                <DialogTitle>Change User Role</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Select a new role for the user:
-                    </DialogContentText>
-                    <Select
-                        value={newRole}
-                        onChange={(e) => setNewRole(e.target.value)}
-                        fullWidth
-                    >
-                        {roles.map((role) => (
-                            <MenuItem key={role} value={role}>
-                                {role}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleDialogClose}>Cancel</Button>
-                    <Button onClick={handleSaveRoleChange} disabled={isLoading}>
-                        {isLoading ? "Saving..." : "Save"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Password Change Dialog */}
-            <Dialog open={passwordDialogOpen} onClose={handlePasswordDialogClose}>
-                <DialogTitle>Change User Password</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Enter a new password for the user:
-                    </DialogContentText>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="New Password"
-                        type="password"
-                        fullWidth
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handlePasswordDialogClose}>Cancel</Button>
-                    <Button onClick={handleSavePasswordChange} disabled={isLoading}>
-                        {isLoading ? "Saving..." : "Save"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Group Add Dialog */}
-            <Dialog open={groupDialogOpen} onClose={handleGroupDialogClose}>
-                <DialogTitle>Add User to Group</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Select a group to add the user to:
-                    </DialogContentText>
-                    <Select
-                        value={selectedGroup}
-                        onChange={(e) => setSelectedGroup(e.target.value)}
-                        fullWidth
-                    >
-                        {groups.map((group) => (
-                            <MenuItem key={group.title} value={group.title}>
-                                {group.title}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleGroupDialogClose}>Cancel</Button>
-                    <Button onClick={handleSaveGroupAdd} disabled={isLoading}>
-                        {isLoading ? "Saving..." : "Save"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {statusMessage && (
-                <div className="mt-4">
-                    <div className={`p-4 rounded ${
-                        statusMessage.includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}>
-                        {statusMessage}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

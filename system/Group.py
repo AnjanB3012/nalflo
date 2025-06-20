@@ -70,6 +70,9 @@ class Group:
         <Group_Description>
         {self.description}
         </Group_Description>
+        <Group_Users>
+        {str(self.users)}
+        </Group_Users>
         """
     
     def toDict(self):

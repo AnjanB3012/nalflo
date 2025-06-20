@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/navbar.jsx';
 import '../styles/createNewTask.css';
 
 function CreateNewTask() {
@@ -19,7 +19,7 @@ function CreateNewTask() {
             setPreviousTask(location.state.previousTask);
             setTitle(`Re: ${location.state.previousTask.title}`);
             // Initialize selected users with current task's assignees
-            setSelectedUsers(location.state.previousTask.assignedUsers.map(user => user.userName));
+            setSelectedUsers(location.state.previousTask.assignedUsers);
         }
 
         const fetchAssignableUsers = async () => {
@@ -132,30 +132,30 @@ function CreateNewTask() {
                             <div className="users-list">
                                 {/* Show creator first if replying */}
                                 {previousTask && (
-                                    <div key={previousTask.creatorUser.userName} className="user-checkbox" style={{ opacity: '0.7' }}>
+                                    <div key={previousTask.creatorUser} className="user-checkbox" style={{ opacity: '0.7' }}>
                                         <input
                                             type="checkbox"
-                                            id={previousTask.creatorUser.userName}
+                                            id={previousTask.creatorUser}
                                             checked={true}
                                             disabled={true}
                                         />
-                                        <label htmlFor={previousTask.creatorUser.userName}>
-                                            {previousTask.creatorUser.userName} (Creator)
+                                        <label htmlFor={previousTask.creatorUser}>
+                                            {previousTask.creatorUser} (Creator)
                                         </label>
                                     </div>
                                 )}
                                 {/* Show current assignees if replying (excluding creator) */}
-                                {previousTask && previousTask.assignedUsers.map(user => {
-                                    if (user.userName !== previousTask.creatorUser.userName) {
+                                {previousTask && previousTask.assignedUsers.map(userName => {
+                                    if (userName !== previousTask.creatorUser) {
                                         return (
-                                            <div key={user.userName} className="user-checkbox" style={{ opacity: '0.7' }}>
+                                            <div key={userName} className="user-checkbox" style={{ opacity: '0.7' }}>
                                                 <input
                                                     type="checkbox"
-                                                    id={user.userName}
+                                                    id={userName}
                                                     checked={true}
                                                     disabled={true}
                                                 />
-                                                <label htmlFor={user.userName}>{user.name} (Current Assignee)</label>
+                                                <label htmlFor={userName}>{userName} (Current Assignee)</label>
                                             </div>
                                         );
                                     }
@@ -163,10 +163,8 @@ function CreateNewTask() {
                                 })}
                                 {/* Show assignable users */}
                                 {assignableUsers.map(user => {
-                                    const isCurrentAssignee = previousTask?.assignedUsers.some(
-                                        assignedUser => assignedUser.userName === user.userName
-                                    );
-                                    const isCreator = previousTask?.creatorUser.userName === user.userName;
+                                    const isCurrentAssignee = previousTask?.assignedUsers.includes(user.userName);
+                                    const isCreator = previousTask?.creatorUser === user.userName;
                                     if (!isCurrentAssignee && !isCreator) {
                                         return (
                                             <div key={user.userName} className="user-checkbox">

@@ -108,6 +108,12 @@ class Role:
         <Role_Description>
         {self.roleDescription}
         </Role_Description>
+        <Role_Permissions>
+        {str(self.permissions)}
+        </Role_Permissions>
+        <Role_Users>
+        {str(self.users)}
+        </Role_Users>
         """
     
     def toDict(self) -> dict:
@@ -120,5 +126,5 @@ class Role:
             "roleTitle": self.roleTitle,
             "roleDescription": self.roleDescription,
             "permissions": self.permissions,
-            "users": [user.toDict() for user in self.users]
+            "users": [user.getUserName() for user in self.users]
         }

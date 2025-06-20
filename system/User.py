@@ -170,7 +170,7 @@ class User:
             "roleInfo": self.getRole().getDetails()[0],
             "groups": [group.getDetails()[0] for group in self.groups],
             "name": self.name,
-            "tasks": [task.toDict() for task in self.tasks]
+            "tasks": [task.getTaskId() for task in self.tasks]
         }
     
     def removeFromGroup(self, group: Group):

@@ -89,26 +89,33 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
             {error && <div className="error-message">{error}</div>}
             <div className="task-header">
                 <h3>{task.title}</h3>
-                <span className={`status-badge ${getStatusClass(task.status)}`}>
-                    {getStatusDisplay(task.status)}
-                </span>
+                <div className="task-indicators">
+                    <span className={`status-badge ${getStatusClass(task.status)}`}>
+                        {getStatusDisplay(task.status)}
+                    </span>
+                    {task.replyTask && (
+                        <span className="reply-indicator" title="This task has a reply">
+                            💬
+                        </span>
+                    )}
+                </div>
             </div>
             <div className="task-details">
                 <p><strong>Description:</strong> {task.description}</p>
-                <p><strong>Created by:</strong> {task.creatorUser?.userName || 'Unknown'}</p>
+                <p><strong>Created by:</strong> {task.creatorUser || 'Unknown'}</p>
                 <p><strong>Created on:</strong> {new Date(task.creationTimeStamp).toLocaleString()}</p>
-                <p><strong>Assigned to:</strong> {task.assignedUsers?.map(user => user.userName).join(', ') || 'None'}</p>
+                <p><strong>Assigned to:</strong> {task.assignedUsers?.join(', ') || 'None'}</p>
             </div>
             <div className="task-actions" onClick={(e) => e.stopPropagation()}>
                 {task.status && (
                     <>
-                        {(task.creatorUser?.userName === currentUser || 
-                          task.assignedUsers?.some(user => user.userName === currentUser)) && (
+                        {(task.creatorUser === currentUser || 
+                          task.assignedUsers?.includes(currentUser)) && (
                             <button className="close-button" onClick={() => onClose(task.taskId)}>
                                 Close Task
                             </button>
                         )}
-                        {task.creatorUser?.userName === currentUser && (
+                        {task.creatorUser === currentUser && (
                             <button className="assign-button" onClick={handleAssignUsers}>
                                 Assign Users
                             </button>

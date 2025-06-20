@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/navbar.jsx';
 import '../styles/TaskView.css';
 
 function TaskView() {
@@ -33,8 +33,9 @@ function TaskView() {
                 if (currentTask) {
                     setTask(currentTask);
                     const timeline = [currentTask];
-                    let previousTask = currentTask.previousTask?.[0];
                     
+                    // Add previous tasks to timeline
+                    let previousTask = currentTask.previousTask?.[0];
                     while (previousTask) {
                         const prevTask = data.tasks.find(t => t.taskId === previousTask.taskId);
                         if (prevTask) {
@@ -44,6 +45,15 @@ function TaskView() {
                             break;
                         }
                     }
+                    
+                    // Add reply task to timeline if it exists
+                    if (currentTask.replyTask) {
+                        const replyTask = data.tasks.find(t => t.taskId === currentTask.replyTask.taskId);
+                        if (replyTask) {
+                            timeline.push(replyTask);
+                        }
+                    }
+                    
                     setTaskTimeline(timeline);
                 } else {
                     setError("Task not found");
@@ -124,7 +134,7 @@ function TaskView() {
                 const currentUser = parsedCookie.username;
                 const filteredUsers = data.users.filter(user => user.userName !== currentUser);
                 setAssignableUsers(filteredUsers);
-                setSelectedUsers(task.assignedUsers.map(user => user.userName));
+                setSelectedUsers(task.assignedUsers);
                 setShowAssignUsers(true);
             }
         } catch (error) {
@@ -199,7 +209,7 @@ function TaskView() {
             
             if (assignableData.message === "Success") {
                 // Get current task's assignees
-                const currentAssignees = task.assignedUsers.map(user => user.userName);
+                const currentAssignees = task.assignedUsers;
                 
                 // Filter out current user from assignable users
                 const filteredUsers = assignableData.users.filter(user => user.userName !== parsedCookie.username);
@@ -266,7 +276,7 @@ function TaskView() {
     useEffect(() => {
         if (showReplyModal && task) {
             // Initialize with current task's assignees
-            setSelectedUsers(task.assignedUsers.map(user => user.userName));
+            setSelectedUsers(task.assignedUsers);
         }
     }, [showReplyModal, task]);
 
@@ -314,12 +324,12 @@ function TaskView() {
                                 </div>
                                 <div className="task-info">
                                     <p><strong>Description:</strong> {task.description}</p>
-                                    <p><strong>From:</strong> {task.creatorUser?.userName || 'Unknown'}</p>
+                                    <p><strong>From:</strong> {task.creatorUser || 'Unknown'}</p>
                                     <p><strong>Date:</strong> {new Date(task.creationTimeStamp).toLocaleString()}</p>
                                     <p><strong>To:</strong> {(() => {
-                                        const assignees = task.assignedUsers?.filter(user => user.userName !== task.creatorUser?.userName) || [];
-                                        const creator = task.creatorUser?.userName;
-                                        const assigneeList = assignees.map(user => user.userName);
+                                        const assignees = task.assignedUsers?.filter(userName => userName !== task.creatorUser) || [];
+                                        const creator = task.creatorUser;
+                                        const assigneeList = [...assignees];
                                         if (creator) {
                                             assigneeList.unshift(`${creator} (Creator)`);
                                         }
@@ -328,8 +338,8 @@ function TaskView() {
                                 </div>
                                 {index === 0 && task.status && (
                                     <div className="task-actions">
-                                        {(task.creatorUser?.userName === parsedCookie?.username || 
-                                          task.assignedUsers?.some(user => user.userName === parsedCookie?.username)) && (
+                                        {(task.creatorUser === parsedCookie?.username || 
+                                          task.assignedUsers?.includes(parsedCookie?.username)) && (
                                             <button className="close-button" onClick={handleCloseTask}>
                                                 Close Task
                                             </button>
@@ -414,15 +424,15 @@ function TaskView() {
                                                 style={{ marginRight: '8px' }}
                                             />
                                             <span>
-                                                {task.creatorUser.userName} (Creator)
+                                                {task.creatorUser} (Creator)
                                             </span>
                                         </label>
                                     </div>
                                     {/* Then show current assignees (excluding creator) */}
-                                    {task.assignedUsers.map(user => {
-                                        if (user.userName !== task.creatorUser.userName) {
+                                    {task.assignedUsers.map(userName => {
+                                        if (userName !== task.creatorUser) {
                                             return (
-                                                <div key={user.userName} className="user-assignment-item" style={{
+                                                <div key={userName} className="user-assignment-item" style={{
                                                     marginBottom: '8px',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -440,7 +450,7 @@ function TaskView() {
                                                             style={{ marginRight: '8px' }}
                                                         />
                                                         <span>
-                                                            {user.userName} (Current Assignee)
+                                                            {userName} (Current Assignee)
                                                         </span>
                                                     </label>
                                                 </div>
@@ -450,10 +460,8 @@ function TaskView() {
                                     })}
                                     {/* Then show assignable users */}
                                     {assignableUsers.map(user => {
-                                        const isCurrentAssignee = task.assignedUsers.some(
-                                            assignedUser => assignedUser.userName === user.userName
-                                        );
-                                        const isCreator = task.creatorUser.userName === user.userName;
+                                        const isCurrentAssignee = task.assignedUsers.includes(user.userName);
+                                        const isCreator = task.creatorUser === user.userName;
                                         if (!isCurrentAssignee && !isCreator) {
                                             return (
                                                 <div key={user.userName} className="user-assignment-item" style={{

@@ -111,7 +111,7 @@ def getSystemRoles():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         roles = thisSystem.getSysRoles()
-        return jsonify({"message": "Success", "roles": [role.toDict() for role in roles]})
+        return jsonify({"message": "Success", "roles": [str(role) for role in roles]})
     else:
         return jsonify({"message": "Failed"})
 
@@ -121,7 +121,7 @@ def getSystemGroups():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         groups = thisSystem.getSysGroups()
-        return jsonify({"message": "Success", "groups": [group.toDict() for group in groups]})
+        return jsonify({"message": "Success", "groups": [str(group) for group in groups]})
     
 @app.route('/ai/getSystemAPIs', methods=['POST'])
 def getSystemAPIs():
@@ -129,7 +129,7 @@ def getSystemAPIs():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         apis = thisSystem.getSysAPIs()
-        return jsonify({"message": "Success", "apis": [{k: v for k, v in api.toDict().items() if k != "apiString"} for api in apis]})
+        return jsonify({"message": "Success", "apis": [str(api) for api in apis]})
     else:
         return jsonify({"message": "Failed"})
 
@@ -139,7 +139,7 @@ def getSystemTasks():
     ai_access_token = data.get('aiAccessToken')
     if ai_access_token == thisSystem.getAIAccessToken():
         tasks = thisSystem.getSysTasks()
-        return jsonify({"message": "Success", "tasks": [task.toDict() for task in tasks]})
+        return jsonify({"message": "Success", "tasks": [str(task) for task in tasks]})
 
 @app.route('/ai/fetchUser', methods=['POST'])
 def fetchUser():
@@ -205,8 +205,28 @@ def createTask():
         creatorUser = thisSystem.getUser(creator)
         if not creatorUser:
             return jsonify({"message": "Failed", "error": "Creator user not found"}), 400
-            
-        tempTask = thisSystem.createTask(data.get('taskName'), data.get('taskDescription'), data.get('assignees'), creatorUser=creatorUser)
+        
+        # Handle reply task if previousTaskId is provided
+        previous_task = None
+        previous_task_id = data.get('previousTaskId')
+        if previous_task_id:
+            previous_task = thisSystem.findTaskByID(int(previous_task_id))
+            if not previous_task:
+                return jsonify({"message": "Failed", "error": "Previous task not found"}), 400
+        
+        # Create the task
+        tempTask = thisSystem.createTask(
+            data.get('taskName'), 
+            data.get('taskDescription'), 
+            data.get('assignees'), 
+            creatorUser=creatorUser,
+            previousTask=[previous_task] if previous_task else None
+        )
+        
+        # If this is a reply task, set the replyTask field on the previous task
+        if previous_task:
+            previous_task.setReplyTask(tempTask)
+        
         return jsonify({"message": "Success", "taskId": tempTask.getTaskId()})
     else:
         return jsonify({"message": "Failed"})
@@ -335,12 +355,17 @@ def getUserTasks():
         if user is None:
             return jsonify({"message": "User not found"})
         if user.getRole().getPermissions()['home']:
-            tasks = user.getTasks()
-            response = {
-                "message": "Success",
-                "tasks": [task.toDict() for task in tasks]
-            }
-            return jsonify(response)
+            try:
+                tasks = user.getTasks()
+                response = {
+                    "message": "Success",
+                    "tasks": [task.toDict() for task in tasks]
+                }
+                return jsonify(response)
+            except Exception as e:
+                print("Error in getUserTasks:", e)
+                import traceback; traceback.print_exc()
+                return jsonify({"message": "Internal server error", "error": str(e)}), 500
         else:
             return jsonify({"message": "Permission Denied"})
     else:
@@ -734,13 +759,18 @@ def createNewTask():
             
             # Create the task
             try:
-                thisSystem.createTask(
+                new_task = thisSystem.createTask(
                     task_title, 
                     task_description, 
                     task_assignees, 
                     user,
                     previousTask=[previous_task] if previous_task else []
                 )
+                
+                # If this is a reply task, set the replyTask field on the previous task
+                if previous_task:
+                    previous_task.setReplyTask(new_task)
+                
                 return jsonify({"message": "Success"})
             except Exception as e:
                 return jsonify({"message": f"Failed to create task: {str(e)}"})

@@ -23,6 +23,22 @@
     color: #333;
 }
 
+.task-indicators {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reply-indicator {
+    font-size: 1.2em;
+    cursor: help;
+    transition: transform 0.2s ease;
+}
+
+.reply-indicator:hover {
+    transform: scale(1.1);
+}
+
 .status-badge {
     padding: 5px 10px;
     border-radius: 15px;

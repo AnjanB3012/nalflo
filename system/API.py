@@ -60,6 +60,7 @@ class API:
         return f"""
         <API_Name>{self.apiName}</API_Name>
         <API_Description>{self.apiDescription}</API_Description>
+        <API_Endpoint>{self.apiEndpoint}</API_Endpoint>
         """
     
     def setDescription(self, newDescription: str):

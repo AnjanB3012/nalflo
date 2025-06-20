@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import Navbar from "../components/navbar.jsx";
 import Editor from "@monaco-editor/react";
 
 function CreateNewThread() {
