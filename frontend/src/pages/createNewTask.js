@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/navbar.jsx';
 import '../styles/createNewTask.css';
+import { getApiBaseUrl } from '../utils/config.js';
 
 function CreateNewTask() {
     const navigate = useNavigate();
@@ -33,7 +34,8 @@ function CreateNewTask() {
             const cookieToken = parsedCookie.token;
 
             try {
-                const response = await fetch("http://localhost:8080/api/home/getAssignableUsersToTask", {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/home/getAssignableUsersToTask`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -45,6 +47,8 @@ function CreateNewTask() {
                     const currentUser = parsedCookie.username;
                     const filteredUsers = data.users.filter(user => user.userName !== currentUser);
                     setAssignableUsers(filteredUsers);
+                } else {
+                    setError(data.message);
                 }
             } catch (error) {
                 console.error("Error fetching assignable users:", error);
@@ -74,7 +78,8 @@ function CreateNewTask() {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/createNewTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/createNewTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createNewConversation, sendMessage, getConversationHistory } from '../services/nalvaService';
 import '../styles/NalvaChat.css';
+import { getApiBaseUrl } from '../utils/config.js';
 
 const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, onConversationUpdate }) => {
     const [messages, setMessages] = useState([]);
@@ -57,7 +58,8 @@ const NalvaChat = ({ cookieToken, selectedConversation, onConversationSelect, on
         if (isPolling && currentConversationId) {
             pollingIntervalRef.current = setInterval(async () => {
                 try {
-                    const response = await fetch('http://localhost:8080/api/nalva/getResponse', {
+                    const baseUrl = await getApiBaseUrl();
+                    const response = await fetch(`${baseUrl}/api/nalva/getResponse`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import "../styles/iam.css";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function CreateGroup() {
     const [groupTitle, setGroupTitle] = useState("");
@@ -12,23 +13,26 @@ function CreateGroup() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const cookieData = localStorage.getItem("local_cookie");
-        if (!cookieData) {
-            setError(true);
-            setErrorMessage("Please log in to create a group");
-            return;
-        }
+        const fetchPermissions = async () => {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) {
+                setError(true);
+                setErrorMessage("Please log in to create a group");
+                return;
+            }
 
-        const parsedCookie = JSON.parse(cookieData);
-        fetch("http://localhost:8080/api/getUserPermissions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ cookie_token: parsedCookie.token }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
+            try {
+                const parsedCookie = JSON.parse(cookieData);
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: parsedCookie.token }),
+                });
+                const data = await response.json();
+                
                 if (data.message === "Success") {
                     if (!data.permissions.iam) {
                         setError(true);
@@ -40,12 +44,13 @@ function CreateGroup() {
                     setError(true);
                     setErrorMessage("Failed to verify permissions");
                 }
-            })
-            .catch((err) => {
+            } catch (err) {
                 console.error("Error fetching permissions:", err);
                 setError(true);
                 setErrorMessage("Failed to connect to the server");
-            });
+            }
+        };
+        fetchPermissions();
     }, []);
 
     const handleSubmit = async (e) => {
@@ -72,7 +77,8 @@ function CreateGroup() {
 
         try {
             const parsedCookie = JSON.parse(cookieData);
-            const response = await fetch("http://localhost:8080/api/iam/createGroup", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/iam/createGroup`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

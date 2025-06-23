@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ErrorPage from "./ErrorPage";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function Main() {
     const [data, setData] = useState(null);
@@ -11,10 +12,17 @@ function Main() {
         if (loginCred) {
             navigate("/home");
         } else {
-            fetch("http://localhost:8080/api/homeCheck")
-                .then((response) => response.json())
-                .then((data) => setData(data))
-                .catch((error) => console.error("Error fetching data:", error));
+            const checkHome = async () => {
+                try {
+                    const apiBaseUrl = await getApiBaseUrl();
+                    const response = await fetch(`${apiBaseUrl}/api/homeCheck`);
+                    const data = await response.json();
+                    setData(data);
+                } catch (error) {
+                    console.error("Error fetching data:", error);
+                }
+            };
+            checkHome();
         }
     }, [navigate]);
 

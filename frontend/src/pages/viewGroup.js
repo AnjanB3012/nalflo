@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import ErrorPage from "./ErrorPage";
 import "../styles/iam.css";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function ViewGroup() {
     const { groupTitle } = useParams();
@@ -31,18 +32,19 @@ function ViewGroup() {
 
         try {
             const parsedCookie = JSON.parse(cookieData);
-            setCookieToken(parsedCookie.token);
-
-            // Fetch all users
-            fetch("http://localhost:8080/api/iam/getUsers", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ cookie_token: parsedCookie.token }),
-            })
-                .then((response) => response.json())
-                .then((data) => {
+            (async () => {
+                const apiBaseUrl = await getApiBaseUrl();
+                setCookieToken(parsedCookie.token);
+                // Fetch all users
+                try {
+                    const response = await fetch(`${apiBaseUrl}/api/iam/getUsers`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: parsedCookie.token }),
+                    });
+                    const data = await response.json();
                     if (data.message === "Success") {
                         // Store the full user objects
                         setUsers(data.users);
@@ -50,10 +52,10 @@ function ViewGroup() {
                     } else {
                         console.error("Failed to fetch users:", data.message);
                     }
-                })
-                .catch((err) => {
+                } catch (err) {
                     console.error("Error fetching users:", err);
-                });
+                }
+            })();
         } catch (e) {
             setError(true);
             setErrorMessage("Invalid session. Please log in again");
@@ -71,32 +73,33 @@ function ViewGroup() {
 
     useEffect(() => {
         if (!cookieToken) return;
-        
-        fetch("http://localhost:8080/api/iam/viewGroup", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                group_title: groupTitle,
-            }),
-        })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.message === "Success") {
-                console.log("Group data:", data.group); // Debug log
-                setGroup(data.group);
-            } else {
+        (async () => {
+            const apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/iam/viewGroup`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        group_title: groupTitle,
+                    }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    console.log("Group data:", data.group); // Debug log
+                    setGroup(data.group);
+                } else {
+                    setError(true);
+                    setErrorMessage(data.message);
+                }
+            } catch (err) {
+                console.error("Error fetching group:", err); // Debug log
                 setError(true);
-                setErrorMessage(data.message);
+                setErrorMessage("Error fetching group details");
             }
-        })
-        .catch((err) => {
-            console.error("Error fetching group:", err); // Debug log
-            setError(true);
-            setErrorMessage("Error fetching group details");
-        });
+        })();
     }, [cookieToken, groupTitle]);
 
     const handleAddUserClick = () => {
@@ -127,7 +130,8 @@ function ViewGroup() {
         setStatusMessage("Adding user to group...");
 
         try {
-            const response = await fetch("http://localhost:8080/api/iam/addUserToGroup", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/iam/addUserToGroup`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -143,7 +147,7 @@ function ViewGroup() {
 
             if (data.message === "Success") {
                 // Refresh group data
-                const groupResponse = await fetch("http://localhost:8080/api/iam/viewGroup", {
+                const groupResponse = await fetch(`${apiBaseUrl}/api/iam/viewGroup`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -190,7 +194,8 @@ function ViewGroup() {
         setStatusMessage("Removing user from group...");
 
         try {
-            const response = await fetch("http://localhost:8080/api/iam/removeUserFromGroup", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/iam/removeUserFromGroup`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -206,7 +211,7 @@ function ViewGroup() {
 
             if (data.message === "Success") {
                 // Refresh group data
-                const groupResponse = await fetch("http://localhost:8080/api/iam/viewGroup", {
+                const groupResponse = await fetch(`${apiBaseUrl}/api/iam/viewGroup`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -250,7 +255,8 @@ function ViewGroup() {
         setStatusMessage("Deleting group...");
 
         try {
-            const response = await fetch("http://localhost:8080/api/iam/deleteGroup", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/iam/deleteGroup`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

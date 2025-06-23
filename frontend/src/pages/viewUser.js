@@ -4,6 +4,7 @@ import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, B
 import { Select, MenuItem } from "@mui/material";
 import { TextField } from "@mui/material";
 import Navbar from "../components/navbar.jsx";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function ViewUser() {
     const { userName } = useParams();
@@ -37,44 +38,48 @@ function ViewUser() {
             setCookieToken(parsedCookie.token);
 
             // Fetch roles
-            fetch("http://localhost:8080/api/iam/getAllRoleNames", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ cookie_token: parsedCookie.token }),
-            })
-                .then((response) => response.json())
-                .then((roleData) => {
+            (async () => {
+                let apiBaseUrl = await getApiBaseUrl();
+                try {
+                    const response = await fetch(`${apiBaseUrl}/api/iam/getAllRoleNames`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: parsedCookie.token }),
+                    });
+                    const roleData = await response.json();
                     if (roleData.message === "Success") {
                         setRoles(roleData.roles);
                     } else {
                         console.error("Failed to fetch roles:", roleData.message);
                     }
-                })
-                .catch((err) => {
+                } catch (err) {
                     console.error("Error fetching roles:", err);
-                });
+                }
+            })();
 
             // Fetch groups
-            fetch("http://localhost:8080/api/iam/getAllGroups", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ cookie_token: parsedCookie.token }),
-            })
-                .then((response) => response.json())
-                .then((groupData) => {
+            (async () => {
+                let apiBaseUrl = await getApiBaseUrl();
+                try {
+                    const response = await fetch(`${apiBaseUrl}/api/iam/getAllGroups`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ cookie_token: parsedCookie.token }),
+                    });
+                    const groupData = await response.json();
                     if (groupData.message === "Success") {
                         setGroups(groupData.groups);
                     } else {
                         console.error("Failed to fetch groups:", groupData.message);
                     }
-                })
-                .catch((err) => {
+                } catch (err) {
                     console.error("Error fetching groups:", err);
-                });
+                }
+            })();
         } catch (e) {
             setError(true);
             setErrorMessage("Invalid session. Please log in again");
@@ -90,49 +95,49 @@ function ViewUser() {
             target_username: userName
         });
 
-        fetch("http://localhost:8080/api/iam/viewUser", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                target_username: userName,
-            }),
-        })
-        .then((response) => {
-            console.log("Response status:", response.status);
-            return response.json();
-        })
-        .then((data) => {
-            console.log("API Response:", data);
-            if (data.message === "Success") {
-                setUser(data.user);
-            }
-            else if (data.message === "Permission Denied") {
-                setErrorMessage("You don't have permission to view user details");
+        (async () => {
+            let apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/iam/viewUser`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        target_username: userName,
+                    }),
+                });
+                console.log("Response status:", response.status);
+                const data = await response.json();
+                console.log("API Response:", data);
+                if (data.message === "Success") {
+                    setUser(data.user);
+                }
+                else if (data.message === "Permission Denied") {
+                    setErrorMessage("You don't have permission to view user details");
+                    setError(true);
+                }
+                else if (data.message === "Failed") {
+                    setErrorMessage("Your session has expired. Please log in again");
+                    localStorage.removeItem("local_cookie");
+                    setTimeout(() => navigate("/login"), 2000);
+                    setError(true);
+                }
+                else if (data.message === "User not found") {
+                    setErrorMessage(`User "${userName}" does not exist`);
+                    setError(true);
+                }
+                else {
+                    setErrorMessage("An unexpected error occurred");
+                    setError(true);
+                }
+            } catch (error) {
+                console.error("Error fetching user:", error);
+                setErrorMessage("Failed to connect to the server");
                 setError(true);
             }
-            else if (data.message === "Failed") {
-                setErrorMessage("Your session has expired. Please log in again");
-                localStorage.removeItem("local_cookie");
-                setTimeout(() => navigate("/login"), 2000);
-                setError(true);
-            }
-            else if (data.message === "User not found") {
-                setErrorMessage(`User "${userName}" does not exist`);
-                setError(true);
-            }
-            else {
-                setErrorMessage("An unexpected error occurred");
-                setError(true);
-            }
-        })
-        .catch((error) => {
-            console.error("Error fetching user:", error);
-            setErrorMessage("Failed to connect to the server");
-            setError(true);
-        });
+        })();
     }, [userName, cookieToken, navigate]);
 
     const handleRoleChange = () => {
@@ -162,43 +167,46 @@ function ViewUser() {
         setIsLoading(true);
         setStatusMessage("Updating role...");
 
-        try {
-            const response = await fetch("http://localhost:8080/api/iam/changeUserRole", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    cookie_token: cookieToken,
-                    target_username: userName,
-                    new_role_name: newRole,
-                }),
-            });
+        (async () => {
+            let apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/iam/changeUserRole`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        target_username: userName,
+                        new_role_name: newRole,
+                    }),
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (data.message === "Success") {
-                setUser({ ...user, roleInfo: newRole });
-                setStatusMessage("Role updated successfully!");
-                setTimeout(() => {
-                    handleDialogClose();
-                    setStatusMessage("");
-                }, 1500);
-            } else if (data.message === "Permission Denied") {
-                setStatusMessage("You don't have permission to change roles");
-            } else if (data.message === "Failed") {
-                setStatusMessage("Session expired. Please log in again");
-                localStorage.removeItem("local_cookie");
-                setTimeout(() => navigate("/login"), 2000);
-            } else {
-                setStatusMessage("An error occurred while updating the role");
+                if (data.message === "Success") {
+                    setUser({ ...user, roleInfo: newRole });
+                    setStatusMessage("Role updated successfully!");
+                    setTimeout(() => {
+                        handleDialogClose();
+                        setStatusMessage("");
+                    }, 1500);
+                } else if (data.message === "Permission Denied") {
+                    setStatusMessage("You don't have permission to change roles");
+                } else if (data.message === "Failed") {
+                    setStatusMessage("Session expired. Please log in again");
+                    localStorage.removeItem("local_cookie");
+                    setTimeout(() => navigate("/login"), 2000);
+                } else {
+                    setStatusMessage("An error occurred while updating the role");
+                }
+            } catch (error) {
+                console.error("Error updating role:", error);
+                setStatusMessage("Failed to connect to the server");
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Error updating role:", error);
-            setStatusMessage("Failed to connect to the server");
-        } finally {
-            setIsLoading(false);
-        }
+        })();
     };
 
     const handleGroupAdd = () => {
@@ -228,57 +236,61 @@ function ViewUser() {
         setIsLoading(true);
         setStatusMessage("Adding user to group...");
 
-        try {
-            const response = await fetch("http://localhost:8080/api/iam/addUserToGroup", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    cookie_token: cookieToken,
-                    group_title: selectedGroup,
-                    user_name: userName,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.message === "Success") {
-                // Refresh user data
-                const userResponse = await fetch("http://localhost:8080/api/iam/viewUser", {
+        (async () => {
+            let apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/iam/addUserToGroup`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         cookie_token: cookieToken,
-                        target_username: userName,
+                        group_title: selectedGroup,
+                        user_name: userName,
                     }),
                 });
-                const userData = await userResponse.json();
-                if (userData.message === "Success") {
-                    setUser(userData.user);
+
+                const data = await response.json();
+
+                if (data.message === "Success") {
+                    // Refresh user data
+                    apiBaseUrl = await getApiBaseUrl();
+                    const userResponse = await fetch(`${apiBaseUrl}/api/iam/viewUser`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            cookie_token: cookieToken,
+                            target_username: userName,
+                        }),
+                    });
+                    const userData = await userResponse.json();
+                    if (userData.message === "Success") {
+                        setUser(userData.user);
+                    }
+                    setStatusMessage("User added to group successfully!");
+                    setTimeout(() => {
+                        handleGroupDialogClose();
+                        setStatusMessage("");
+                    }, 1500);
+                } else if (data.message === "Permission Denied") {
+                    setStatusMessage("You don't have permission to add users to groups");
+                } else if (data.message === "Failed") {
+                    setStatusMessage("Session expired. Please log in again");
+                    localStorage.removeItem("local_cookie");
+                    setTimeout(() => navigate("/login"), 2000);
+                } else {
+                    setStatusMessage("An error occurred while adding the user to the group");
                 }
-                setStatusMessage("User added to group successfully!");
-                setTimeout(() => {
-                    handleGroupDialogClose();
-                    setStatusMessage("");
-                }, 1500);
-            } else if (data.message === "Permission Denied") {
-                setStatusMessage("You don't have permission to add users to groups");
-            } else if (data.message === "Failed") {
-                setStatusMessage("Session expired. Please log in again");
-                localStorage.removeItem("local_cookie");
-                setTimeout(() => navigate("/login"), 2000);
-            } else {
-                setStatusMessage("An error occurred while adding the user to the group");
+            } catch (error) {
+                console.error("Error adding user to group:", error);
+                setStatusMessage("Failed to connect to the server");
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Error adding user to group:", error);
-            setStatusMessage("Failed to connect to the server");
-        } finally {
-            setIsLoading(false);
-        }
+        })();
     };
 
     const handleGroupRemove = async (groupName) => {
@@ -291,54 +303,58 @@ function ViewUser() {
         setIsLoading(true);
         setStatusMessage("Removing user from group...");
 
-        try {
-            const response = await fetch("http://localhost:8080/api/iam/removeUserFromGroup", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    cookie_token: cookieToken,
-                    group_title: groupName,
-                    user_name: userName,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.message === "Success") {
-                // Refresh user data
-                const userResponse = await fetch("http://localhost:8080/api/iam/viewUser", {
+        (async () => {
+            let apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/iam/removeUserFromGroup`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         cookie_token: cookieToken,
-                        target_username: userName,
+                        group_title: groupName,
+                        user_name: userName,
                     }),
                 });
-                const userData = await userResponse.json();
-                if (userData.message === "Success") {
-                    setUser(userData.user);
+
+                const data = await response.json();
+
+                if (data.message === "Success") {
+                    // Refresh user data
+                    apiBaseUrl = await getApiBaseUrl();
+                    const userResponse = await fetch(`${apiBaseUrl}/api/iam/viewUser`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            cookie_token: cookieToken,
+                            target_username: userName,
+                        }),
+                    });
+                    const userData = await userResponse.json();
+                    if (userData.message === "Success") {
+                        setUser(userData.user);
+                    }
+                    setStatusMessage("User removed from group successfully!");
+                    setTimeout(() => setStatusMessage(""), 1500);
+                } else if (data.message === "Permission Denied") {
+                    setStatusMessage("You don't have permission to remove users from groups");
+                } else if (data.message === "Failed") {
+                    setStatusMessage("Session expired. Please log in again");
+                    localStorage.removeItem("local_cookie");
+                    setTimeout(() => navigate("/login"), 2000);
+                } else {
+                    setStatusMessage("An error occurred while removing the user from the group");
                 }
-                setStatusMessage("User removed from group successfully!");
-                setTimeout(() => setStatusMessage(""), 1500);
-            } else if (data.message === "Permission Denied") {
-                setStatusMessage("You don't have permission to remove users from groups");
-            } else if (data.message === "Failed") {
-                setStatusMessage("Session expired. Please log in again");
-                localStorage.removeItem("local_cookie");
-                setTimeout(() => navigate("/login"), 2000);
-            } else {
-                setStatusMessage("An error occurred while removing the user from the group");
+            } catch (error) {
+                console.error("Error removing user from group:", error);
+                setStatusMessage("Failed to connect to the server");
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Error removing user from group:", error);
-            setStatusMessage("Failed to connect to the server");
-        } finally {
-            setIsLoading(false);
-        }
+        })();
     };
 
     const handlePasswordChange = () => {
@@ -368,44 +384,47 @@ function ViewUser() {
         setIsLoading(true);
         setStatusMessage("Updating password...");
 
-        try {
-            const response = await fetch("http://localhost:8080/api/iam/changeUserPassword", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    cookie_token: cookieToken,
-                    target_username: userName,
-                    new_password: newPassword,
-                }),
-            });
+        (async () => {
+            let apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/iam/changeUserPassword`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        target_username: userName,
+                        new_password: newPassword,
+                    }),
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (data.message === "Success") {
-                setStatusMessage("Password updated successfully!");
-                setTimeout(() => {
-                    handlePasswordDialogClose();
-                    setStatusMessage("");
-                }, 1500);
-            } else if (data.message === "Permission Denied") {
-                setStatusMessage("You don't have permission to change user passwords");
-            } else if (data.message === "Failed") {
-                setStatusMessage("Session expired. Please log in again");
-                localStorage.removeItem("local_cookie");
-                setTimeout(() => navigate("/login"), 2000);
-            } else if (data.message === "User not found") {
-                setStatusMessage("User not found");
-            } else {
-                setStatusMessage("An error occurred while updating the password");
+                if (data.message === "Success") {
+                    setStatusMessage("Password updated successfully!");
+                    setTimeout(() => {
+                        handlePasswordDialogClose();
+                        setStatusMessage("");
+                    }, 1500);
+                } else if (data.message === "Permission Denied") {
+                    setStatusMessage("You don't have permission to change user passwords");
+                } else if (data.message === "Failed") {
+                    setStatusMessage("Session expired. Please log in again");
+                    localStorage.removeItem("local_cookie");
+                    setTimeout(() => navigate("/login"), 2000);
+                } else if (data.message === "User not found") {
+                    setStatusMessage("User not found");
+                } else {
+                    setStatusMessage("An error occurred while updating the password");
+                }
+            } catch (error) {
+                console.error("Error updating password:", error);
+                setStatusMessage("Failed to connect to the server");
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Error updating password:", error);
-            setStatusMessage("Failed to connect to the server");
-        } finally {
-            setIsLoading(false);
-        }
+        })();
     };
 
     if (error) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/navbar.jsx';
 import '../styles/home.css';
+import { getApiBaseUrl } from '../utils/config.js';
 
 function Home() {
     const navigate = useNavigate();
@@ -15,7 +16,8 @@ function Home() {
 
     const fetchTasks = async (cookieToken) => {
         try {
-            const response = await fetch("http://localhost:8080/api/home/getUserTasks", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/getUserTasks`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -48,7 +50,8 @@ function Home() {
             const cookieToken = parsedCookie.token;
             setCurrentUser(parsedCookie.username);
             try {
-                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -82,7 +85,8 @@ function Home() {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/closeTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/closeTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

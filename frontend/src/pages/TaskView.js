@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/navbar.jsx';
 import '../styles/TaskView.css';
+import { getApiBaseUrl } from '../utils/config.js';
 
 function TaskView() {
     const { taskId } = useParams();
@@ -20,7 +21,8 @@ function TaskView() {
     // Function to recursively fetch all previous tasks
     const fetchTaskChain = async (taskId, cookieToken) => {
         try {
-            const response = await fetch("http://localhost:8080/api/home/getUserTasks", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/getUserTasks`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -92,7 +94,8 @@ function TaskView() {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/closeTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/closeTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -122,7 +125,8 @@ function TaskView() {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/getAssignableUsersToTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/getAssignableUsersToTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -150,7 +154,8 @@ function TaskView() {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/assignUsersToTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/assignUsersToTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -166,7 +171,7 @@ function TaskView() {
                 setShowAssignUsers(false);
                 setSelectedUsers([]);
                 // Refresh task data
-                const taskResponse = await fetch("http://localhost:8080/api/home/getUserTasks", {
+                const taskResponse = await fetch(`${apiBaseUrl}/api/home/getUserTasks`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -198,7 +203,8 @@ function TaskView() {
 
         try {
             // First get assignable users
-            const assignableResponse = await fetch("http://localhost:8080/api/home/getAssignableUsersToTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const assignableResponse = await fetch(`${apiBaseUrl}/api/home/getAssignableUsersToTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -241,7 +247,8 @@ function TaskView() {
 
         try {
             // Create the reply task
-            const createResponse = await fetch("http://localhost:8080/api/home/createNewTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const createResponse = await fetch(`${apiBaseUrl}/api/home/createNewTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

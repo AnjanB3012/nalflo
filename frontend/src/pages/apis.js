@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import "../styles/apis.css";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function API()
 {
@@ -28,7 +29,8 @@ function API()
 
             try
             {
-                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -39,7 +41,7 @@ function API()
                 if (data.message=== "Success")
                 {
                     setPermissions(data.permissions);
-                    const allAPIs = await fetch("http://localhost:8080/api/apis/getAllAPIs", {
+                    const allAPIs = await fetch(`${apiBaseUrl}/api/apis/getAllAPIs`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -53,7 +55,7 @@ function API()
                     }
 
                     // Fetch threads
-                    const threadsResponse = await fetch("http://localhost:8080/api/threads/getAllThreads", {
+                    const threadsResponse = await fetch(`${apiBaseUrl}/api/threads/getAllThreads`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -66,7 +68,7 @@ function API()
                     }
 
                     // Fetch files
-                    const filesResponse = await fetch("http://localhost:8080/api/apis/getFiles", {
+                    const filesResponse = await fetch(`${apiBaseUrl}/api/apis/getFiles`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -116,7 +118,8 @@ function API()
         formData.append('cookie_token', cookieToken);
 
         try {
-            const response = await fetch("http://localhost:8080/api/apis/uploadFile", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/apis/uploadFile`, {
                 method: "POST",
                 body: formData,
             });
@@ -125,7 +128,7 @@ function API()
                 setUploadSuccess("File uploaded successfully!");
                 setUploadError("");
                 // Refresh file list
-                const filesResponse = await fetch("http://localhost:8080/api/apis/getFiles", {
+                const filesResponse = await fetch(`${apiBaseUrl}/api/apis/getFiles`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -147,8 +150,9 @@ function API()
         }
     };
 
-    const handleDownload = (filename) => {
-        window.open(`http://localhost:8080/api/apis/downloadFile/${filename}`, '_blank');
+    const handleDownload = async (filename) => {
+        const apiBaseUrl = await getApiBaseUrl();
+        window.open(`${apiBaseUrl}/api/apis/downloadFile/${filename}`, '_blank');
     };
 
     const handleDelete = async (filename) => {
@@ -162,7 +166,8 @@ function API()
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/apis/removeFile", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/apis/removeFile`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -177,7 +182,7 @@ function API()
                 setUploadSuccess("File deleted successfully!");
                 setUploadError("");
                 // Refresh file list
-                const filesResponse = await fetch("http://localhost:8080/api/apis/getFiles", {
+                const filesResponse = await fetch(`${apiBaseUrl}/api/apis/getFiles`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

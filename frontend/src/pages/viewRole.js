@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function ViewRole() {
     const { roleTitle } = useParams();
@@ -31,62 +32,56 @@ function ViewRole() {
     }, []);
 
     useEffect(() => {
-        if (!cookieToken) return;
-
-        fetch("http://localhost:8080/api/iam/viewRole", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                role_name: roleTitle,
-            }),
-        })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.message === "Success") {
-                setRole(data.role);
-                setTempPermissions(data.role.permissions);
-            }
-            else if (data.message === "Permission Denied") {
-                setErrorMessage("You don't have permission to view role details");
+        const fetchRole = async () => {
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/iam/viewRole`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        role_name: roleTitle,
+                    }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setRole(data.role);
+                    setTempPermissions(data.role.permissions);
+                } else {
+                    setError(true);
+                    setErrorMessage(data.message);
+                }
+            } catch (err) {
+                console.error("Error fetching role:", err);
                 setError(true);
+                setErrorMessage("Error fetching role details");
             }
-            else if (data.message === "Role not found") {
-                setErrorMessage(`Role "${roleTitle}" does not exist`);
-                setError(true);
-            }
-            else {
-                setErrorMessage("An unexpected error occurred");
-                setError(true);
-            }
-        })
-        .catch((error) => {
-            console.error("Error fetching role:", error);
-            setErrorMessage("Failed to connect to the server");
-            setError(true);
-        });
-    }, [roleTitle, cookieToken]);
+        };
+        fetchRole();
+    }, [cookieToken, roleTitle]);
 
     const handleEditPermissions = () => {
         setEditingPermissions(true);
     };
 
-    const handleSavePermissions = () => {
-        fetch("http://localhost:8080/api/iam/updateRolePermissions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                role_name: roleTitle,
-                permissions: tempPermissions,
-            }),
-        })
-        .then((response) => response.json())
-        .then((data) => {
+    const handleSavePermissions = async () => {
+        try {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/iam/updateRolePermissions`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken,
+                    role_name: roleTitle,
+                    permissions: tempPermissions,
+                }),
+            });
+            const data = await response.json();
+            
             if (data.message === "Success") {
                 setRole({ ...role, permissions: tempPermissions });
                 setEditingPermissions(false);
@@ -94,12 +89,11 @@ function ViewRole() {
                 setErrorMessage("Failed to update permissions");
                 setError(true);
             }
-        })
-        .catch((error) => {
+        } catch (error) {
             console.error("Error updating permissions:", error);
             setErrorMessage("Failed to connect to the server");
             setError(true);
-        });
+        }
     };
 
     const handleCancelEdit = () => {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import Editor from "@monaco-editor/react";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function CreateNewAPI() {
     const [apiName, setAPIName] = useState("");
@@ -37,7 +38,8 @@ function CreateNewAPI() {
 
 
         try {
-            const response = await fetch("http://localhost:8080/api/apis/addNewAPI", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/apis/addNewAPI`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

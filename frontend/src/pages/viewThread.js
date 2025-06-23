@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 import Editor from "@monaco-editor/react";
 import Navbar from "../components/navbar.jsx";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function ViewThread() {
     const { threadName } = useParams();
@@ -35,33 +36,32 @@ function ViewThread() {
     }, [navigate]);
 
     useEffect(() => {
-        if (!cookieToken) return;
-
-        fetch("http://localhost:8080/api/threads/viewThread", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                thread_name: threadName,
-            }),
-        })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.message === "Success") {
-                setThread(data.thread);
-                setEditedThreadString(data.thread.threadString);
-            } else {
-                setError(true);
-                setErrorMessage(data.message);
+        const fetchThread = async () => {
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/threads/viewThread`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        thread_name: threadName
+                    }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setThread(data.thread);
+                    setEditedThreadString(data.thread.threadString);
+                } else {
+                    setError(data.message || "Failed to fetch thread");
+                }
+            } catch (error) {
+                console.error("Error fetching thread:", error);
+                setError("Failed to fetch thread");
             }
-        })
-        .catch((err) => {
-            console.error("Error fetching thread:", err);
-            setError(true);
-            setErrorMessage("Error fetching thread details");
-        });
+        };
+        fetchThread();
     }, [cookieToken, threadName]);
 
     const handleEditClick = () => {
@@ -85,7 +85,8 @@ function ViewThread() {
         setStatusMessage("Saving changes...");
 
         try {
-            const response = await fetch("http://localhost:8080/api/threads/modifyThreadAPI", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/threads/modifyThreadAPI`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -101,7 +102,7 @@ function ViewThread() {
 
             if (data.message === "Success") {
                 // Refresh thread data
-                const threadResponse = await fetch("http://localhost:8080/api/threads/viewThread", {
+                const threadResponse = await fetch(`${apiBaseUrl}/api/threads/viewThread`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -157,7 +158,8 @@ function ViewThread() {
         setStatusMessage("Deleting thread...");
 
         try {
-            const response = await fetch("http://localhost:8080/api/threads/removeThreadAPI", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/threads/removeThreadAPI`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

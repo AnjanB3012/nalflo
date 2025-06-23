@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import Editor from "@monaco-editor/react";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function CreateNewThread() {
     const [threadName, setThreadName] = useState("");
@@ -23,7 +24,8 @@ function CreateNewThread() {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/threads/addThreadAPI", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/threads/addThreadAPI`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

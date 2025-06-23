@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function CreateNewUser() {
     const [username, setUsername] = useState("");
@@ -16,50 +17,57 @@ function CreateNewUser() {
 
     useEffect(() => {
         // Fetch the domain from the API
-        fetch("http://localhost:8080/api/getDomain")
-            .then((response) => response.json())
-            .then((data) => {
+        const fetchDomain = async () => {
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getDomain`);
+                const data = await response.json();
                 if (data.domain) {
                     setDomain(data.domain);
                 } else {
                     setError("Failed to fetch domain.");
                 }
-            })
-            .catch((err) => {
+            } catch (err) {
                 console.error("Error fetching domain:", err);
                 setError("An error occurred while fetching the domain.");
-            });
+            }
+        };
+        fetchDomain();
     }, []);
 
     useEffect(() => {
-        const cookieData = localStorage.getItem("local_cookie");
-        if (!cookieData) {
-            setError("No cookie found. Please log in.");
-            return;
-        }
+        const fetchRoles = async () => {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) {
+                setError("No cookie found. Please log in.");
+                return;
+            }
 
-        const parsedCookie = JSON.parse(cookieData);
-        const cookieToken = parsedCookie.token;
-
-        fetch("http://localhost:8080/api/iam/getAllRoleNames", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ cookie_token: cookieToken }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
+            try {
+                const parsedCookie = JSON.parse(cookieData);
+                const cookieToken = parsedCookie.token;
+                const apiBaseUrl = await getApiBaseUrl();
+                
+                const response = await fetch(`${apiBaseUrl}/api/iam/getAllRoleNames`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const data = await response.json();
+                
                 if (data.message === "Success") {
                     setRoles(data.roles);
                 } else {
                     setError("Failed to fetch roles.");
                 }
-            })
-            .catch((err) => {
+            } catch (err) {
                 console.error("Error fetching roles:", err);
                 setError("An error occurred while fetching roles.");
-            });
+            }
+        };
+        fetchRoles();
     }, []);
 
     const handleSubmit = async (e) => {
@@ -74,8 +82,9 @@ function CreateNewUser() {
         const parsedCookie = JSON.parse(cookieData);
         const cookieToken = parsedCookie.token;
 
+        const apiBaseUrl = await getApiBaseUrl();
         try {
-            const response = await fetch("http://localhost:8080/api/iam/createNewUser", {
+            const response = await fetch(`${apiBaseUrl}/api/iam/createNewUser`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

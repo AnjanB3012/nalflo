@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function CreateNewRole() {
     const [permissions, setPermissions] = useState(null);
@@ -19,23 +20,26 @@ function CreateNewRole() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const cookieData = localStorage.getItem("local_cookie");
-        if (!cookieData) {
-            setError(true);
-            setErrorMessage("Please log in to create a new role");
-            return;
-        }
+        const fetchPermissions = async () => {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) {
+                setError(true);
+                setErrorMessage("Please log in to create a new role");
+                return;
+            }
 
-        const parsedCookie = JSON.parse(cookieData);
-        fetch("http://localhost:8080/api/getUserPermissions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ cookie_token: parsedCookie.token }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
+            try {
+                const parsedCookie = JSON.parse(cookieData);
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: parsedCookie.token }),
+                });
+                const data = await response.json();
+                
                 if (data.message === "Success") {
                     if (!data.permissions.iam) {
                         setError(true);
@@ -47,15 +51,16 @@ function CreateNewRole() {
                     setError(true);
                     setErrorMessage("Failed to verify permissions");
                 }
-            })
-            .catch((err) => {
+            } catch (err) {
                 console.error("Error fetching permissions:", err);
                 setError(true);
                 setErrorMessage("Failed to connect to the server");
-            });
+            }
+        };
+        fetchPermissions();
     }, []);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
         if (!roleName.trim()) {
@@ -64,35 +69,36 @@ function CreateNewRole() {
             return;
         }
 
-        const cookieData = localStorage.getItem("local_cookie");
-        const parsedCookie = JSON.parse(cookieData);
-
-        fetch("http://localhost:8080/api/iam/createRole", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: parsedCookie.token,
-                role_name: roleName,
-                role_description: roleDescription,
-                permissions: rolePermissions
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.message === "Success") {
-                    navigate("/iam");
-                } else {
-                    setError(true);
-                    setErrorMessage("Failed to create role");
-                }
-            })
-            .catch((err) => {
-                console.error("Error creating role:", err);
-                setError(true);
-                setErrorMessage("Failed to connect to the server");
+        try {
+            const cookieData = localStorage.getItem("local_cookie");
+            const parsedCookie = JSON.parse(cookieData);
+            const apiBaseUrl = await getApiBaseUrl();
+            
+            const response = await fetch(`${apiBaseUrl}/api/iam/createRole`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    cookie_token: parsedCookie.token,
+                    role_name: roleName,
+                    role_description: roleDescription,
+                    permissions: rolePermissions
+                }),
             });
+            const data = await response.json();
+            
+            if (data.message === "Success") {
+                navigate("/iam");
+            } else {
+                setError(true);
+                setErrorMessage("Failed to create role");
+            }
+        } catch (err) {
+            console.error("Error creating role:", err);
+            setError(true);
+            setErrorMessage("Failed to connect to the server");
+        }
     };
 
     const handlePermissionChange = (permission) => {

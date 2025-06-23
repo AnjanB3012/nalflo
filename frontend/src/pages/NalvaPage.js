@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import NalvaChat from '../components/NalvaChat';
 import Navbar from '../components/navbar.jsx';
 import { getConversationHistory } from '../services/nalvaService';
+import { getApiBaseUrl } from '../utils/config.js';
 import '../styles/NalvaPage.css';
 
 const NalvaPage = () => {
@@ -38,7 +39,8 @@ const NalvaPage = () => {
             setCookieToken(parsedCookie.token);
 
             try {
-                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

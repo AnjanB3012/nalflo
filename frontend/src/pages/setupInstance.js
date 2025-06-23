@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../utils/config.js';
 
 function SetupInstance() {
     const [step, setStep] = useState(0);
@@ -20,18 +21,23 @@ function SetupInstance() {
     ];
 
     useEffect(() => {
-        fetch("http://localhost:8080/api/homeCheck")
-            .then((response) => response.json())
-            .then((data) => setData(data))
-            .catch((error) => console.error("Error fetching data:", error));
+        const checkHome = async () => {
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/homeCheck`);
+                const data = await response.json();
+                setData(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        };
+        checkHome();
     }, []);
 
     useEffect(() => {
         if (data) {
             if (data.message === "1") {
-                navigate("/login");
-            } else if (data.message === "0") {
-                navigate("/setup");
+                navigate("/home");
             }
         }
     }, [data, navigate]);
@@ -43,30 +49,35 @@ function SetupInstance() {
         });
     };
 
-    const handlePost = () => {
-        fetch('http://localhost:8080/api/setupInstance', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.message === "Instance is Setup") {
-                    alert("Instance setup successfully!");
-                    window.location.href = "/login";
+    const handleSubmit = async () => {
+        if (data && data.message === "0") {
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/setupInstance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customerName: formData.customerName,
+                        adminPassword: formData.adminPassword,
+                        contactEmail: formData.contactEmail,
+                        domain: formData.domain
+                    }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    navigate("/login");
                 } else {
-                    alert("Error setting up instance. Please try again.");
+                    alert("Setup failed. Please try again.");
                 }
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-                alert("An error occurred. Please try again.");
-            });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
     };
 
     const handleNext = () => {
         if (step === steps.length - 1) {
-            handlePost();
+            handleSubmit();
         } else {
             setStep(step + 1);
         }

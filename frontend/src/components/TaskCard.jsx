@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../utils/config.js';
 import '../styles/TaskCard.css';
 
 function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
@@ -29,7 +30,8 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/getAssignableUsersToTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/getAssignableUsersToTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -46,8 +48,8 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
                 setError(data.message);
             }
         } catch (error) {
-            setError("Error fetching assignable users");
             console.error("Error fetching assignable users:", error);
+            setError("Failed to fetch assignable users");
         }
     };
 
@@ -59,7 +61,8 @@ function TaskCard({ task, onDelete, onClose, onAssignUsers, currentUser }) {
         const cookieToken = parsedCookie.token;
 
         try {
-            const response = await fetch("http://localhost:8080/api/home/assignUsersToTask", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/assignUsersToTask`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

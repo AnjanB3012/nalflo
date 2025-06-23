@@ -1,75 +1,111 @@
-import axios from 'axios';
+import { getApiBaseUrl } from '../utils/config.js';
 
-const API_BASE_URL = 'http://localhost:8080/api/nalva';
+// Helper to get the full Nalva API base URL
+const getNalvaApiBaseUrl = async () => {
+    const apiBaseUrl = await getApiBaseUrl();
+    return `${apiBaseUrl}/api/nalva`;
+};
 
 // Create a new conversation with Nalva
 export const createNewConversation = async (cookieToken, message) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/newConversation`, {
-            cookie_token: cookieToken,
-            message: message
+        const baseUrl = await getNalvaApiBaseUrl();
+        const response = await fetch(`${baseUrl}/newConversation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                cookie_token: cookieToken,
+                message: message
+            })
         });
-        if (response.data.message === "Success") {
-            return response.data;
+        const data = await response.json();
+        if (data.message === "Success") {
+            return data;
         } else {
-            throw new Error(response.data.message || 'Failed to create conversation');
+            throw new Error(data.message || 'Failed to create conversation');
         }
     } catch (error) {
         console.error('Error creating conversation:', error);
-        throw error.response?.data || { message: 'Failed to create conversation' };
+        throw error;
     }
 };
 
 // Send a message in an existing conversation
 export const sendMessage = async (cookieToken, conversationId, message) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/sendMessage`, {
-            cookie_token: cookieToken,
-            conversation_id: conversationId,
-            message: message
+        const baseUrl = await getNalvaApiBaseUrl();
+        const response = await fetch(`${baseUrl}/sendMessage`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                cookie_token: cookieToken,
+                conversation_id: conversationId,
+                message: message
+            })
         });
-        if (response.data.message === "Success") {
-            return response.data;
+        const data = await response.json();
+        if (data.message === "Success") {
+            return data;
         } else {
-            throw new Error(response.data.message || 'Failed to send message');
+            throw new Error(data.message || 'Failed to send message');
         }
     } catch (error) {
         console.error('Error sending message:', error);
-        throw error.response?.data || { message: 'Failed to send message' };
+        throw error;
     }
 };
 
 // Get conversation history
 export const getConversationHistory = async (cookieToken) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/getConversationHistory`, {
-            cookie_token: cookieToken
+        const baseUrl = await getNalvaApiBaseUrl();
+        const response = await fetch(`${baseUrl}/getConversationHistory`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                cookie_token: cookieToken
+            })
         });
-        if (response.data.message === "Success") {
-            return response.data;
+        const data = await response.json();
+        if (data.message === "Success") {
+            return data;
         } else {
-            throw new Error(response.data.message || 'Failed to fetch conversation history');
+            throw new Error(data.message || 'Failed to fetch conversation history');
         }
     } catch (error) {
         console.error('Error fetching conversation history:', error);
-        throw error.response?.data || { message: 'Failed to fetch conversation history' };
+        throw error;
     }
 };
 
 // Get response for a conversation
 export const getResponse = async (cookieToken, conversationId) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/getResponse`, {
-            cookie_token: cookieToken,
-            conversation_id: conversationId
+        const baseUrl = await getNalvaApiBaseUrl();
+        const response = await fetch(`${baseUrl}/getResponse`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                cookie_token: cookieToken,
+                conversation_id: conversationId
+            })
         });
-        if (response.data.message === "Success") {
-            return response.data;
+        const data = await response.json();
+        if (data.message === "Success") {
+            return data;
         } else {
-            throw new Error(response.data.message || 'Failed to get response');
+            throw new Error(data.message || 'Failed to get response');
         }
     } catch (error) {
         console.error('Error getting response:', error);
-        throw error.response?.data || { message: 'Failed to get response' };
+        throw error;
     }
 }; 

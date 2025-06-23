@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../utils/config.js';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -14,10 +15,17 @@ function Login() {
     }
 
     useEffect(() => {
-        fetch("http://localhost:8080/api/homeCheck")
-            .then((response) => response.json())
-            .then((data) => setData(data))
-            .catch((error) => console.error("Error fetching data:", error));
+        const checkHome = async () => {
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/homeCheck`);
+                const data = await response.json();
+                setData(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        };
+        checkHome();
     }, []);
 
     useEffect(() => {
@@ -28,43 +36,44 @@ function Login() {
         }
     }, [data, navigate]);
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         if (data && data.message === "1") {
-            fetch('http://localhost:8080/api/loginUser', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    if (data.message === "Success") {
-                        const expirationTime = new Date().getTime() + 24 * 60 * 60 * 1000; // 24 hours from now
-                        const cookieData = {
-                            token: data.cookie_token,
-                            expiresAt: expirationTime,
-                            username: username
-                        };
-                        localStorage.setItem("local_cookie", JSON.stringify(cookieData));
-                        
-                        // Fetch user permissions
-                        fetch('http://localhost:8080/api/getUserPermissions', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ cookie_token: data.cookie_token }),
-                        })
-                            .then((response) => response.json())
-                            .then((permissionsData) => {
-                                if (permissionsData.message === "Success") {
-                                    localStorage.setItem("user_permissions", JSON.stringify(permissionsData.permissions));
-                                    window.location.href = "/home";
-                                }
-                            })
-                            .catch((error) => console.error('Error fetching permissions:', error));
-                    } else {
-                        alert("Invalid credentials. Please try again.");
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/loginUser`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+                const data = await response.json();
+                
+                if (data.message === "Success") {
+                    const expirationTime = new Date().getTime() + 24 * 60 * 60 * 1000; // 24 hours from now
+                    const cookieData = {
+                        token: data.cookie_token,
+                        expiresAt: expirationTime,
+                        username: username
+                    };
+                    localStorage.setItem("local_cookie", JSON.stringify(cookieData));
+                    
+                    // Fetch user permissions
+                    const permissionsResponse = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cookie_token: data.cookie_token }),
+                    });
+                    const permissionsData = await permissionsResponse.json();
+                    
+                    if (permissionsData.message === "Success") {
+                        localStorage.setItem("user_permissions", JSON.stringify(permissionsData.permissions));
+                        window.location.href = "/home";
                     }
-                })
-                .catch((error) => console.error('Error:', error));
+                } else {
+                    alert("Invalid credentials. Please try again.");
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
         }
     };
 

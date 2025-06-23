@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/navbar.jsx';
 import '../styles/management.css';
+import { getApiBaseUrl } from '../utils/config.js';
 
 const Management = () => {
     const [businessRules, setBusinessRules] = useState([]);
@@ -23,8 +24,9 @@ const Management = () => {
             const cookieToken = parsedCookie.token;
 
             try {
+                const apiBaseUrl = await getApiBaseUrl();
                 // Fetch permissions
-                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -57,7 +59,8 @@ const Management = () => {
 
     const fetchBusinessRules = async (cookieToken) => {
         try {
-            const response = await fetch('http://localhost:8080/api/home/getBusinessRules', {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/getBusinessRules`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,7 +97,8 @@ const Management = () => {
 
         const parsedCookie = JSON.parse(cookieData);
         try {
-            const response = await fetch('http://localhost:8080/api/home/addBusinessRule', {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/addBusinessRule`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -127,7 +131,8 @@ const Management = () => {
 
         const parsedCookie = JSON.parse(cookieData);
         try {
-            const response = await fetch('http://localhost:8080/api/home/removeBusinessRule', {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/home/removeBusinessRule`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

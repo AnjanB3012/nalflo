@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 import Editor from "@monaco-editor/react";
 import Navbar from "../components/navbar.jsx";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function ViewAPI() {
     const { apiName } = useParams();
@@ -43,32 +44,33 @@ function ViewAPI() {
 
     useEffect(() => {
         if (!cookieToken) return;
-
-        fetch("http://localhost:8080/api/apis/viewAPI", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                cookie_token: cookieToken,
-                api_name: apiName,
-            }),
-        })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.message === "Success") {
-                setApi(data.api);
-                setEditedApiString(formatApiString(data.api.apiString));
-            } else {
+        (async () => {
+            const apiBaseUrl = await getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/apis/viewAPI`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        cookie_token: cookieToken,
+                        api_name: apiName,
+                    }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setApi(data.api);
+                    setEditedApiString(formatApiString(data.api.apiString));
+                } else {
+                    setError(true);
+                    setErrorMessage(data.message);
+                }
+            } catch (err) {
+                console.error("Error fetching API:", err);
                 setError(true);
-                setErrorMessage(data.message);
+                setErrorMessage("Error fetching API details");
             }
-        })
-        .catch((err) => {
-            console.error("Error fetching API:", err);
-            setError(true);
-            setErrorMessage("Error fetching API details");
-        });
+        })();
     }, [cookieToken, apiName]);
 
     const handleEditClick = () => {
@@ -92,10 +94,11 @@ function ViewAPI() {
         setStatusMessage("Saving changes...");
 
         try {
+            const apiBaseUrl = await getApiBaseUrl();
             // Format the edited code back to the expected format with <break> markers
             const formattedApiString = editedApiString.split('\n').join('<break>');
 
-            const response = await fetch("http://localhost:8080/api/apis/modifyAPI", {
+            const response = await fetch(`${apiBaseUrl}/api/apis/modifyAPI`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -111,7 +114,7 @@ function ViewAPI() {
 
             if (data.message === "Success") {
                 // Refresh API data
-                const apiResponse = await fetch("http://localhost:8080/api/apis/viewAPI", {
+                const apiResponse = await fetch(`${apiBaseUrl}/api/apis/viewAPI`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -167,7 +170,8 @@ function ViewAPI() {
         setStatusMessage("Deleting API...");
 
         try {
-            const response = await fetch("http://localhost:8080/api/apis/deleteAPI", {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/apis/deleteAPI`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import ErrorPage from "./ErrorPage";
 import "../styles/iam.css";
+import { getApiBaseUrl } from '../utils/config.js';
 
 function IAM() {
     const [permissions, setPermissions] = useState(null);
@@ -26,7 +27,8 @@ function IAM() {
             const cookieToken = parsedCookie.token;
 
             try {
-                const response = await fetch("http://localhost:8080/api/getUserPermissions", {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/getUserPermissions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -38,7 +40,7 @@ function IAM() {
                     setPermissions(data.permissions);
                     
                     // Fetch users
-                    const usersResponse = await fetch("http://localhost:8080/api/iam/getUsers", {
+                    const usersResponse = await fetch(`${apiBaseUrl}/api/iam/getUsers`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -54,7 +56,7 @@ function IAM() {
                     }
 
                     // Fetch roles
-                    const rolesResponse = await fetch("http://localhost:8080/api/iam/getRoles", {
+                    const rolesResponse = await fetch(`${apiBaseUrl}/api/iam/getRoles`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -70,7 +72,7 @@ function IAM() {
                     }
 
                     // Fetch groups
-                    const groupsResponse = await fetch("http://localhost:8080/api/iam/getAllGroups", {
+                    const groupsResponse = await fetch(`${apiBaseUrl}/api/iam/getAllGroups`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
