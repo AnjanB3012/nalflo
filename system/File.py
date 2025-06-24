@@ -1,5 +1,5 @@
 import os
-import datetime
+from datetime import datetime
 
 class File:
     """
@@ -9,7 +9,7 @@ class File:
         size (int): The size of the file in bytes
         modified (datetime): The last modified timestamp of the file
     """
-    def __init__(self, name: str, size: int = 0, modified: datetime.datetime = None):
+    def __init__(self, name: str, size: int = 0, modified: datetime = None):
         """
         Initializes a File object
         Args:

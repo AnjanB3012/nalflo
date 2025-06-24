@@ -1006,9 +1006,19 @@ def getFiles():
     else:
         return jsonify({"message": "Failed"})
 
-@app.route('/api/apis/downloadFile/<filename>', methods=['GET'])
+@app.route('/api/apis/downloadFile/<filename>', methods=['POST'])
 def downloadFile(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
 
 @app.route('/api/apis/removeFile', methods=['POST'])
 def removeFile():
@@ -1406,4 +1416,7 @@ signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
 signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=8080, use_reloader=False)
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    app.run(debug=True, host="0.0.0.0", port=os.getenv("PORT_SERVER"), use_reloader=False)

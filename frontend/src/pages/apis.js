@@ -152,7 +152,62 @@ function API()
 
     const handleDownload = async (filename) => {
         const apiBaseUrl = await getApiBaseUrl();
-        window.open(`${apiBaseUrl}/api/apis/downloadFile/${filename}`, '_blank');
+        const cookieData = localStorage.getItem("local_cookie");
+        if (!cookieData) {
+            setUploadError("No cookie found. Please log in.");
+            return;
+        }
+        const parsedCookie = JSON.parse(cookieData);
+        const cookieToken = parsedCookie.token;
+        
+        try {
+            // Make POST request to download endpoint
+            const response = await fetch(`${apiBaseUrl}/api/apis/downloadFile/${filename}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    cookie_token: cookieToken
+                })
+            });
+            
+            if (response.ok) {
+                // Get the blob from the response
+                const blob = await response.blob();
+                
+                // Create a download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up the URL object
+                window.URL.revokeObjectURL(url);
+                
+                setUploadSuccess("Download completed!");
+                setUploadError("");
+                
+                // Clear success message after 3 seconds
+                setTimeout(() => {
+                    setUploadSuccess("");
+                }, 3000);
+            } else {
+                const errorData = await response.json();
+                setUploadError(errorData.message || "Failed to download file");
+                setUploadSuccess("");
+            }
+        } catch (error) {
+            console.error("Error downloading file:", error);
+            setUploadError("Failed to download file");
+            setUploadSuccess("");
+        }
     };
 
     const handleDelete = async (filename) => {
