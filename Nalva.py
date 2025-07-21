@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pyhold import pyhold
 import threading
 import queue
 import time
@@ -11,13 +12,15 @@ from google.genai import types
 
 
 class Nalva:
-    def __init__(self,aiAccessToken: str, userName: str, FirstMessage: str, conversationID: int = 1, businessRules: list = [], setupMode: bool = False):
+    def __init__(self,nalvaAccessToken: str, userName: str, FirstMessage: str, conversationID: int = 1, businessRules: list = [], setupMode: bool = False):
         self.userName = userName
         self.conversationHistory = []
         self.response_queue = queue.Queue()
         self.processing_thread = None
         self.is_processing = False
         self.setupMode = setupMode
+        # Initialize the conversation object for AI calls
+        self.conversation = []
         # Add first message with metadata
         self.conversationHistory.append({
             "type": "user",
@@ -25,14 +28,25 @@ class Nalva:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversationID": conversationID
         })
-        self.aiAccessToken = aiAccessToken
+        # Add first message to conversation
+        self.conversation.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=FirstMessage)],
+            )
+        )
+        self.nalvaAccessToken = nalvaAccessToken
         self.businessRules = businessRules
+        self.testingVals = pyhold("testing.xml")
+        # Initialize totalTokens counter
+        self.testingVals["totalTokens"] = 0
         if not setupMode:
         # Start processing first message in background
             self._start_processing(FirstMessage, conversationID)
         
     def perform_api_call(self, api_end_point, body_parameters_json, aiAccessToken_param):
         body_parameters_json["aiAccessToken"] = aiAccessToken_param
+        body_parameters_json["signedInUser"] = self.userName
         try:
             response = requests.post(f"http://localhost:8080{api_end_point}", json=body_parameters_json)
             if response.status_code == 200:
@@ -75,6 +89,14 @@ class Nalva:
                 "conversationID": conversationID
             })
             
+            # Append Nalva's final response to conversation
+            self.conversation.append(
+                types.Content(
+                    role="model",
+                    parts=[types.Part.from_text(text=replyMsg)],
+                )
+            )
+            
             # Put response in queue
             self.response_queue.put({
                 "type": "nalva",
@@ -87,7 +109,7 @@ class Nalva:
             
     def _generate_reply(self, inputMessage: str) -> str:
         """Generate reply based on message content"""
-        return self.perform_ai_call(inputMessage, self.aiAccessToken, self.businessRules)
+        return self.perform_ai_call(inputMessage, self.nalvaAccessToken, self.businessRules)
 
     def newMessage(self, inputMessage: str, conversationID: int) -> None:
         """Add a new message and start processing it in background"""
@@ -98,6 +120,14 @@ class Nalva:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversationID": conversationID
         })
+        
+        # Append new message to conversation
+        self.conversation.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=inputMessage)],
+            )
+        )
         
         # Only start processing if not in setup mode
         if not self.setupMode:
@@ -124,6 +154,14 @@ class Nalva:
             return 0
         return max(msg["conversationID"] for msg in self.conversationHistory)
     
+    def getTotalTokens(self) -> int:
+        """Get the total number of tokens used by Nalva"""
+        return self.testingVals.get("totalTokens", 0)
+    
+    def resetTokenCount(self) -> None:
+        """Reset the total token count to 0"""
+        self.testingVals["totalTokens"] = 0
+    
     def perform_ai_call(self,prompt, aiAccessToken_token, businessRules_param):
         load_dotenv()
         dict_response = {
@@ -137,48 +175,9 @@ class Nalva:
             businessRules_param = "None for now."
         print(businessRules_param)
         
-        # Create conversation history from the full conversation
-        conversation_history = []
-        for msg in self.conversationHistory:
-            role = "user" if msg["type"] == "user" else "model"  # "nalva" type maps to "model" role
-            conversation_history.append(
-                types.Content(
-                    role=role,
-                    parts=[
-                        types.Part.from_text(text=msg["message"]),
-                    ],
-                )
-            )
-        
-        while dict_response["isStep"]:
-            print(next_prompt)
-            try:
-                client = genai.Client(
-                    api_key = os.getenv("GOOGLE_API_KEY")
-                )
-                model = "gemini-2.5-flash-preview-05-20"
-                
-                generate_content_config = types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=genai.types.Schema(
-                        type = genai.types.Type.OBJECT,
-                        properties = {
-                            "isStep": genai.types.Schema(
-                                type = genai.types.Type.BOOLEAN,
-                            ),
-                            "to_user_response": genai.types.Schema(
-                                type = genai.types.Type.STRING,
-                            ),
-                            "API_EndPoint": genai.types.Schema(
-                                type = genai.types.Type.STRING,
-                            ),
-                            "Body_Parameters_JSON": genai.types.Schema(
-                                type = genai.types.Type.STRING,
-                            ),
-                        },
-                    ),
-                    system_instruction=[
-                        types.Part.from_text(text=f"""
+        # Cache the system instruction to avoid recreating it every time
+        if not hasattr(self, '_cached_system_instruction'):
+            self._cached_system_instruction = types.Part.from_text(text=f"""
 You are Nalva, a conversational intelligent agent designed to understand user requests and perform actions or tasks based on conversations. You interact with APIs to fulfill the user's needs in a friendly and helpful manner.
 
 Your objective is to:
@@ -217,14 +216,14 @@ Important Rules:
 
 First API Access:
 - Your first API is:
-  - Endpoint: `/ai/getSystemAPIs`
+  - Endpoint: `/ai/getSystemAPIGroups`
   - Description: Retrieves all APIs in the system. Returns a list of API objects with their details.
   - Required JSON Body: `{{}}` (Empty JSON)
 
 Important: 
 - Do **NOT** call this API immediately.
 - First, analyze the task and confirm if action is needed.
-- Only call `/ai/getSystemAPIs` if action is confirmed necessary.
+- Only call `/ai/getSystemAPIGroups` if action is confirmed necessary.
 
 Action Execution:
 - Perform API calls strictly step-by-step. 
@@ -256,7 +255,7 @@ API Interaction Rules:
 Example Flow:
 1. User says: "Can you assign this task to John?"
 2. Analyze request and confirm action is needed.
-3. Call `/ai/getSystemAPIs` to retrieve the list of APIs.
+3. Call `/ai/getSystemAPIGroups` to retrieve the list of APIs.
 4. Identify the appropriate API to fetch system users (e.g., `getSystemUsers`).
 5. Call `getSystemUsers` to retrieve all users.
 6. Search for a user matching the name "John" (ensure precise match — no guessing).
@@ -291,39 +290,94 @@ keep this username in mind while fetching data from the APIs or creating tasks.
 Business Rules:
 {businessRules_param}
 """)
-                    ]
-                )
-                output = ""
-                for chunk in client.models.generate_content_stream(
-                    model=model,
-                    contents=conversation_history,
-                    config=generate_content_config,
-                ):
-                    output += chunk.text
-                dict_response = json.loads(output)
-                print(dict_response)
-                if dict_response["isStep"]:
-                    response = self.perform_api_call(dict_response["API_EndPoint"], json.loads(dict_response["Body_Parameters_JSON"]), aiAccessToken_token)
-                    next_prompt = response
-                    # Append the API response to conversation history
-                    conversation_history.append(
-                        types.Content(
-                            role="model",
-                            parts=[
-                                types.Part.from_text(text=output),
-                            ],
-                        )
+        
+        while dict_response["isStep"]:
+            print(next_prompt)
+            retry_waits = [60, 3600]  # 1 minute, then 1 hour
+            retry_index = 0
+            while True:
+                try:
+                    client = genai.Client(
+                        api_key = os.getenv("GOOGLE_API_KEY")
                     )
-                    conversation_history.append(
-                        types.Content(
-                            role="user",
-                            parts=[
-                                types.Part.from_text(text=next_prompt),
-                            ],
-                        )
+                    model = "gemini-2.5-flash-preview-05-20"
+                    generate_content_config = types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=genai.types.Schema(
+                            type = genai.types.Type.OBJECT,
+                            properties = {
+                                "isStep": genai.types.Schema(
+                                    type = genai.types.Type.BOOLEAN,
+                                ),
+                                "to_user_response": genai.types.Schema(
+                                    type = genai.types.Type.STRING,
+                                ),
+                                "API_EndPoint": genai.types.Schema(
+                                    type = genai.types.Type.STRING,
+                                ),
+                                "Body_Parameters_JSON": genai.types.Schema(
+                                    type = genai.types.Type.STRING,
+                                ),
+                            },
+                        ),
+                        system_instruction=[self._cached_system_instruction]
                     )
-            except Exception as e:
-                print(f"Error processing task: {e}")
-                dict_response["isStep"] = False
+                    output = ""
+                    # Count tokens for the current conversation before making the call
+                    token_count_response = client.models.count_tokens(
+                        model=model,
+                        contents=self.conversation
+                    )
+                    current_tokens = token_count_response.total_tokens
+                    
+                    # Generate content and collect response
+                    response_stream = client.models.generate_content_stream(
+                        model=model,
+                        contents=self.conversation,
+                        config=generate_content_config,
+                    )
+                    
+                    # Collect the response and get usage metadata
+                    response_chunks = []
+                    for chunk in response_stream:
+                        response_chunks.append(chunk)
+                        output += chunk.text
+                    
+                    # Get the last chunk to access usage metadata
+                    if response_chunks:
+                        last_chunk = response_chunks[-1]
+                        if hasattr(last_chunk, 'usage_metadata') and last_chunk.usage_metadata:
+                            # Add the total tokens used in this call to our counter
+                            self.testingVals["totalTokens"] += last_chunk.usage_metadata.total_token_count
+                        else:
+                            # Fallback: add the counted tokens if usage_metadata is not available
+                            self.testingVals["totalTokens"] += current_tokens
+                    
+                    dict_response = json.loads(output)
+                    print(dict_response)
+                    if dict_response["isStep"]:
+                        response = self.perform_api_call(dict_response["API_EndPoint"], json.loads(dict_response["Body_Parameters_JSON"]), aiAccessToken_token)
+                        next_prompt = response
+                        # Append the AI response to conversation
+                        self.conversation.append(
+                            types.Content(
+                                role="model",
+                                parts=[types.Part.from_text(text=output)],
+                            )
+                        )
+                        # Append the API response to conversation
+                        self.conversation.append(
+                            types.Content(
+                                role="user",
+                                parts=[types.Part.from_text(text=next_prompt)],
+                            )
+                        )
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    print(f"Error processing task: {e}")
+                    wait_time = retry_waits[retry_index % 2]
+                    print(f"Waiting for {wait_time} seconds before retrying...")
+                    time.sleep(wait_time)
+                    retry_index += 1
 
         return dict_response["to_user_response"]

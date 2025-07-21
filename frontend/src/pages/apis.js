@@ -10,7 +10,7 @@ function API()
     const [error, setError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(true);
-    const [apis, setAPIs] = useState([]);
+    const [apiGroups, setAPIGroups] = useState([]);
     const [threads, setThreads] = useState([]);
     const [files, setFiles] = useState([]);
     const [uploadError, setUploadError] = useState("");
@@ -51,7 +51,7 @@ function API()
                     const allAPIsData = await allAPIs.json();
                     if (allAPIsData.message === "Success")
                     {
-                        setAPIs(allAPIsData.apis);
+                        setAPIGroups(allAPIsData.apiGroups);
                     }
 
                     // Fetch threads
@@ -210,6 +210,59 @@ function API()
         }
     };
 
+    const handleDeleteAPIGroup = async (groupName) => {
+        if (!window.confirm(`Are you sure you want to delete the API group "${groupName}"?`)) {
+            return;
+        }
+
+        const cookieData = localStorage.getItem("local_cookie");
+        if (!cookieData) {
+            setUploadError("No cookie found. Please log in.");
+            return;
+        }
+
+        const parsedCookie = JSON.parse(cookieData);
+        const cookieToken = parsedCookie.token;
+
+        try {
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/api/apis/deleteAPIGroup`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ 
+                    cookie_token: cookieToken,
+                    group_name: groupName 
+                }),
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setUploadSuccess("API group deleted successfully!");
+                setUploadError("");
+                // Refresh API groups list
+                const apisResponse = await fetch(`${apiBaseUrl}/api/apis/getAllAPIs`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const apisData = await apisResponse.json();
+                if (apisData.message === "Success") {
+                    setAPIGroups(apisData.apiGroups);
+                }
+            } else {
+                setUploadError(data.message || "Failed to delete API group");
+                setUploadSuccess("");
+            }
+        } catch (error) {
+            console.error("Error deleting API group:", error);
+            setUploadError("Failed to delete API group");
+            setUploadSuccess("");
+        }
+    };
+
     const handleDelete = async (filename) => {
         const cookieData = localStorage.getItem("local_cookie");
         if (!cookieData) {
@@ -307,29 +360,46 @@ function API()
             <div className="card-container">
                 <div className="card">
                     <div className="card-header">
-                        <h2 className="card-title">APIs</h2>
-                        <button className="button button-primary" onClick={() => navigate("/createNewAPI")}>Create New API</button>
+                        <h2 className="card-title">API Groups</h2>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button className="button button-primary" onClick={() => navigate("/createNewAPI")}>Create New API</button>
+                            <button className="button button-secondary" onClick={() => navigate("/createNewAPIGroup")}>Create New API Group</button>
+                        </div>
                     </div>
-                    <table className="api-table">
-                        <thead>
-                            <tr>
-                                <th>API Name</th>
-                                <th>API Description</th>
-                                <th>API Endpoint</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {apis.map((api) => (
-                                <tr key={api.apiName}>
-                                    <td>{api.apiName}</td>
-                                    <td>{api.apiDescription}</td>
-                                    <td>{api.apiEndpoint}</td>
-                                    <td><button className="button button-success" onClick={() => navigate(`/viewAPI/${api.apiName}`)}>View</button></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    {apiGroups.map((apiGroup) => (
+                        <div key={apiGroup.apiGroupName} style={{ marginBottom: '20px', border: '1px solid #ddd', borderRadius: '5px', padding: '15px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <h3 style={{ margin: 0, color: '#333' }}>{apiGroup.apiGroupName}</h3>
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                    <button className="button button-success" onClick={() => navigate(`/viewAPIGroup/${apiGroup.apiGroupName}`)}>View Group</button>
+                                    {apiGroup.apiGroupName !== "System APIs" && (
+                                        <button className="button button-danger" onClick={() => handleDeleteAPIGroup(apiGroup.apiGroupName)}>Delete Group</button>
+                                    )}
+                                </div>
+                            </div>
+                            <p style={{ margin: '5px 0', color: '#666', fontSize: '14px' }}>{apiGroup.apiGroupDescription}</p>
+                            <table className="api-table">
+                                <thead>
+                                    <tr>
+                                        <th>API Name</th>
+                                        <th>API Description</th>
+                                        <th>API Endpoint</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {apiGroup.apis.map((api) => (
+                                        <tr key={api.apiName}>
+                                            <td>{api.apiName}</td>
+                                            <td>{api.developerVisibility ? api.apiDescription : "N/A"}</td>
+                                            <td>{api.apiEndpoint}</td>
+                                            <td><button className="button button-success" onClick={() => navigate(`/viewAPI/${api.apiName}`)}>View</button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
                 </div>
 
                 <div className="card">

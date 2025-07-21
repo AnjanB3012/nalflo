@@ -7,7 +7,7 @@ class API:
         apiEndpoint (str): The endpoint of the API
     """
 
-    def __init__(self, apiName: str, apiDescription: str, apiEndpoint: str, apiString: str):
+    def __init__(self, apiName: str, apiDescription: str, apiEndpoint: str, apiString: str, developerVisibility: bool = True):
         """
         Initializes the API object
         Args:
@@ -18,6 +18,7 @@ class API:
         self.apiDescription = apiDescription
         self.apiEndpoint = apiEndpoint
         self.apiString = apiString
+        self.developerVisibility = developerVisibility
     
     def getApiName(self) -> str:
         """
@@ -51,6 +52,22 @@ class API:
         """
         return self.apiString
 
+    def getDeveloperVisibility(self) -> bool:
+        """
+        Getter for the developer visibility of the API
+        Returns:
+            bool: The developer visibility of the API
+        """
+        return self.developerVisibility
+    
+    def setDeveloperVisibility(self, newDeveloperVisibility: bool):
+        """
+        Setter for the developer visibility of the API
+        Args:
+            newDeveloperVisibility (bool): The new developer visibility of the API
+        """
+        self.developerVisibility = newDeveloperVisibility
+
     def __str__(self) -> str:
         """
         String representation of the API
@@ -61,6 +78,7 @@ class API:
         <API_Name>{self.apiName}</API_Name>
         <API_Description>{self.apiDescription}</API_Description>
         <API_Endpoint>{self.apiEndpoint}</API_Endpoint>
+        <API_Developer_Visibility>{self.developerVisibility}</API_Developer_Visibility>
         """
     
     def setDescription(self, newDescription: str):
@@ -89,5 +107,27 @@ class API:
             "apiName": self.apiName,
             "apiDescription": self.apiDescription,
             "apiEndpoint": self.apiEndpoint,
-            "apiString": self.apiString
+            "apiString": self.apiString,
+            "developerVisibility": self.developerVisibility
         }
+    
+    def toAIString(self) -> str:
+        """
+        Converts the API object to a string
+        Returns:
+            str: The string representation of the API
+        """
+        return f"""
+        <API_Name>
+        {self.apiName}
+        </API_Name>
+        <API_Description>
+        {self.apiDescription}
+        </API_Description>
+        <API_Endpoint>
+        {self.apiEndpoint}
+        </API_Endpoint>
+        <API_Developer_Visibility>
+        {self.developerVisibility}
+        </API_Developer_Visibility>
+        """

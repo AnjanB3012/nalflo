@@ -95,101 +95,25 @@ start_all_threads()
 
 
 # AI Access System APIs go here
-@app.route('/ai/getSystemUsers', methods=['POST'])
-def getSystemUsers():
+@app.route('/ai/getSystemAPIGroups', methods=['POST'])
+def getSystemAPIGroups():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        users = thisSystem.getSysUsers()
-        return jsonify({"message": "Success", "users": [str(user) for user in users]})
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        api_groups = thisSystem.getSysAPIGroups()
+        # Convert API groups to AI string format
+        api_group_strings = [api_group.toAIString() for api_group in api_groups if api_group is not None]
+        return jsonify({"message": "Success", "apiGroups": api_group_strings})
     else:
         return jsonify({"message": "Failed"})
     
-@app.route('/ai/getSystemRoles', methods=['POST'])
-def getSystemRoles():
+@app.route('/ai/getAPIGroupInfo', methods=['POST'])
+def getAPIGroupInfo():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        roles = thisSystem.getSysRoles()
-        return jsonify({"message": "Success", "roles": [str(role) for role in roles]})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/getSystemGroups', methods=['POST'])
-def getSystemGroups():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        groups = thisSystem.getSysGroups()
-        return jsonify({"message": "Success", "groups": [str(group) for group in groups]})
-    
-@app.route('/ai/getSystemAPIs', methods=['POST'])
-def getSystemAPIs():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        apis = thisSystem.getSysAPIs()
-        return jsonify({"message": "Success", "apis": [str(api) for api in apis]})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/getSystemTasks', methods=['POST'])
-def getSystemTasks():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        tasks = thisSystem.getSysTasks()
-        return jsonify({"message": "Success", "tasks": [str(task) for task in tasks]})
-
-@app.route('/ai/fetchUser', methods=['POST'])
-def fetchUser():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        user = thisSystem.getUser(data.get('username'))
-        if user is None:
-            return jsonify({"message": "User not found! If this is a user's name, use the getSystemUsers api instead."})
-        return jsonify({"message": "Success", "user": user.toDict()})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/fetchRole', methods=['POST'])
-def fetchRole():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        role = thisSystem.findRoleByTitle(data.get('roleName'))
-        return jsonify({"message": "Success", "role": role.toDict()})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/fetchGroup', methods=['POST'])
-def fetchGroup():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        group = thisSystem.findGroupByTitle(data.get('groupName'))
-        return jsonify({"message": "Success", "group": group.toDict()})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/fetchAPI', methods=['POST'])
-def fetchAPI():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        api = thisSystem.findAPIByName(data.get('apiName'))
-        return jsonify({"message": "Success", "api": api.toDict()})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/fetchTask', methods=['POST'])
-def fetchTask():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        task = thisSystem.findTaskByID(data.get('taskId'))
-        return jsonify({"message": "Success", "task": task.toDict()})   
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        api_group = thisSystem.findAPIGroupByName(data.get('apiGroupName'))
+        return jsonify({"message": "Success", "apiGroup": api_group.toAIString()})
     else:
         return jsonify({"message": "Failed"})
 
@@ -197,8 +121,8 @@ def fetchTask():
 def createTask():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        creator = data.get('creator')
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        creator = data.get('signedInUser')
         if not creator:
             return jsonify({"message": "Failed", "error": "Creator is required"}), 400
             
@@ -230,45 +154,100 @@ def createTask():
         return jsonify({"message": "Success", "taskId": tempTask.getTaskId()})
     else:
         return jsonify({"message": "Failed"})
-
-@app.route('/ai/updateTask', methods=['POST'])
-def updateTask():
+    
+@app.route('/ai/replyToTask', methods=['POST'])
+def replyToTask():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        thisSystem.updateTask(data.get('taskId'), data.get('taskName'), data.get('taskDescription'), data.get('taskStatus'))
-        return jsonify({"message": "Success"})
-    else:
-        return jsonify({"message": "Failed"})
-
-@app.route('/ai/deleteTask', methods=['POST'])
-def deleteTask1():
-    data = request.get_json()
-    ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        thisSystem.deleteTask(data.get('taskId'))
-        return jsonify({"message": "Success"})
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        if "taskId" not in data:
+            return jsonify({"message": "Failed", "error": "Task ID is required"}), 400
+        task = thisSystem.findTaskByID(data.get('taskId'))
+        if task is None:
+            return jsonify({"message": "Failed", "error": "Task not found"}), 400
+        if "reply" not in data:
+            return jsonify({"message": "Failed", "error": "Reply is required"}), 400
+        if "signedInUser" not in data:
+            return jsonify({"message": "Failed", "error": "Signed in user is required"}), 400
+            
+        # Get the creator user object
+        creator_user = thisSystem.getUser(data.get('signedInUser'))
+        if creator_user is None:
+            return jsonify({"message": "Failed", "error": "Creator user not found"}), 400
+            
+        # Use the proper closeTask method instead of just setting status
+        thisSystem.closeTask(data.get('taskId'))
+        newTitle = task.getTitle()
+        if not newTitle.startswith("Reply to:"):
+            newTitle = "Reply to: " + newTitle
+            
+        # Get usernames from assigned users and creator
+        newAssignees = [user.getUserName() for user in task.getAssignedUsers()] + [task.getCreatorUser().getUserName()]
+        
+        newTask = thisSystem.createTask(newTitle, data.get('reply'), newAssignees, creator_user, [task, *[tempTask for tempTask in task.getPreviousTask()]])
+        return jsonify({"message": "Success", "taskId": newTask.getTaskId()})
     else:
         return jsonify({"message": "Failed"})
     
-@app.route('/ai/closeTask', methods=['POST'])
-def closeTask1():
+@app.route('/ai/getAccessableUsers', methods=['POST'])
+def getAccessableUsers():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        thisSystem.closeTask(data.get('taskId'))
-        return jsonify({"message": "Success"})
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        users = thisSystem.getAccessableUsers(data.get('signedInUser'))
+        returningStr = ""
+        for user in users:
+            returningStr += user.toAIString()
+        return jsonify({"message": "Success", "users": returningStr})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/ai/getRoleInfo', methods=['POST'])
+def getRoleInfo():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        role_info = thisSystem.getUser(data.get('signedInUser')).getRole().toAIString()
+        return jsonify({"message": "Success", "roleInfo": role_info})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/ai/getAccessableGroups', methods=['POST'])
+def getAccessableGroups():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        groups = thisSystem.getAccessableGroups(data.get('signedInUser'))
+        returningStr = ""
+        for group in groups:
+            returningStr += group.toAIString()
+        return jsonify({"message": "Success", "groups": returningStr})
+    else:
+        return jsonify({"message": "Failed"})
+    
+@app.route('/ai/queryRecentTasks', methods=['POST'])
+def queryRecentTasks():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        tasks = thisSystem.queryRecentTasks(signedInUser=data.get('signedInUser'), taskCount=data.get('taskCount'))
+        returningStr = ""
+        for task in tasks:
+            returningStr += task.toAIString()
+        return jsonify({"message": "Success", "tasks": returningStr})
     else:
         return jsonify({"message": "Failed"})
 
-@app.route('/ai/assignUsersToTask', methods=['POST'])
-def assignUsersToTask1():
+@app.route('/ai/queryRecentOpenTasks', methods=['POST'])
+def queryRecentOpenTasks():
     data = request.get_json()
     ai_access_token = data.get('aiAccessToken')
-    if ai_access_token == thisSystem.getAIAccessToken():
-        for assignee in data.get('assignees'):
-            thisSystem.assignTaskToUser(assignee, data.get('taskID'))
-        return jsonify({"message": "Success"})
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        tasks = thisSystem.queryRecentOpenTasks(signedInUser=data.get('signedInUser'), taskCount=data.get('taskCount'))
+        returningStr = ""
+        for task in tasks:
+            returningStr += task.toAIString()
+        return jsonify({"message": "Success", "tasks": returningStr})
     else:
         return jsonify({"message": "Failed"})
 
@@ -292,9 +271,10 @@ def setupInstance():
     if not all([customer_name, admin_password, contact_email, domain]):
         return jsonify({"message": "Error", "error": "All fields (customerName, adminPassword, contactEmail, domain) are required"}), 400
         
-    ai_access_token = str(uuid.uuid4())
-    thisSystem.setUpInstance(customerName=customer_name, adminPassword=admin_password, contactEmail=contact_email, domain=domain, aiAccessToken=ai_access_token)
-    return jsonify({"message": "Instance is Setup", "aiAccessToken": ai_access_token})
+    thisSystem.setUpInstance(customerName=customer_name, adminPassword=admin_password, contactEmail=contact_email, domain=domain)
+    return jsonify({
+        "message": "Instance is Setup",
+    })
 
 @app.route('/api/loginUser', methods=['POST'])
 def loginUser():
@@ -716,7 +696,7 @@ def getAssignableUsersToTask():
     
 @app.route('/api/home/createNewTask', methods=['POST'])
 def createNewTask():
-    data = request.get_json()
+    data = request.get_json()  
     cookie_token = data.get('cookie_token')
     if cookie_token in cookies:
         username = cookies[cookie_token][0]
@@ -876,8 +856,9 @@ def addNewAPI():
             api_description = data.get('api_description')
             api_endpoint = data.get('api_endpoint')
             api_string = data.get('api_string')
+            api_group = data.get('api_group', 'System APIs')  # Default to System APIs if not specified
             tempAPI = API.API(apiName=api_name, apiDescription=api_description, apiEndpoint=api_endpoint, apiString=api_string)
-            thisSystem.addAPI(tempAPI)
+            thisSystem.addAPI(tempAPI, api_group)
             functionStr = stringFunctionMaker(api_string)
             
             # Convert API name to function name format (lowercase with underscores)
@@ -904,6 +885,25 @@ def addNewAPI():
     
 @app.route('/api/apis/getAllAPIs', methods=['POST'])
 def getAllAPIs():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            api_groups = thisSystem.getSysAPIGroups()
+            response = {
+                "message": "Success",
+                "apiGroups": [api_group.toDict() for api_group in api_groups]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/getAllAPIsFlattened', methods=['POST'])
+def getAllAPIsFlattened():
     data = request.get_json()
     cookie_token = data.get('cookie_token')
     if cookie_token in cookies:
@@ -1156,6 +1156,91 @@ def deleteAPI():
                 return jsonify({"message": "Success"})
             else:
                 return jsonify({"message": "Failed to remove API from app.py"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/createAPIGroup', methods=['POST'])
+def createAPIGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            group_name = data.get('group_name')
+            group_description = data.get('group_description')
+            
+            try:
+                thisSystem.createAPIGroup(group_name, group_description)
+                return jsonify({"message": "Success"})
+            except ValueError as e:
+                return jsonify({"message": str(e)})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/getAllAPIGroups', methods=['POST'])
+def getAllAPIGroups():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            api_groups = thisSystem.getSysAPIGroups()
+            response = {
+                "message": "Success",
+                "apiGroups": [api_group.toDict() for api_group in api_groups]
+            }
+            return jsonify(response)
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/viewAPIGroup', methods=['POST'])
+def viewAPIGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            group_name = data.get('group_name')
+            api_group = thisSystem.findAPIGroupByName(group_name)
+            if api_group:
+                response = {
+                    "message": "Success",
+                    "apiGroup": api_group.toDict()
+                }
+                return jsonify(response)
+            else:
+                return jsonify({"message": "API group not found"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "Failed"})
+
+@app.route('/api/apis/deleteAPIGroup', methods=['POST'])
+def deleteAPIGroup():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['development']:
+            group_name = data.get('group_name')
+            api_group = thisSystem.findAPIGroupByName(group_name)
+            if api_group:
+                if api_group.apiGroupName == "System APIs":
+                    return jsonify({"message": "Cannot delete System APIs group"})
+                thisSystem.apiGroups.remove(api_group)
+                return jsonify({"message": "Success"})
+            else:
+                return jsonify({"message": "API group not found"})
         else:
             return jsonify({"message": "Permission Denied"})
     else:

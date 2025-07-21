@@ -3,6 +3,7 @@ import system.Group as Group
 import system.Role as Role
 import system.User as User
 import system.API as API
+import system.APIGroup as APIGroup
 import system.File as File
 import system.ThreadAPI as ThreadAPI
 import xml.etree.ElementTree as ET
@@ -15,6 +16,7 @@ import threading
 import time
 from datetime import datetime, timezone, timedelta
 import Nalva
+import uuid
 
 
 
@@ -132,7 +134,7 @@ class System:
             self.nalvaInstances = {}  # Dictionary to store Nalva instances for each user
             self.loadInstance()
             self.taskQueue = queue.Queue()
-            worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
+            worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.nalaiAccessToken,self.businessRules), daemon=True)
             worker_thread.start()
         
     def getSetUpStatus(self) -> bool:
@@ -143,7 +145,7 @@ class System:
         """
         return self.setUpStatus
 
-    def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str, aiAccessToken: str):
+    def setUpInstance(self, customerName: str, adminPassword: str, contactEmail: str,domain: str):
         """
         Method to set up the instance
         Args:
@@ -159,7 +161,7 @@ class System:
         self.roles = []
         self.users = []
         self.tasks = []
-        self.apis = []
+        self.apiGroups = []
         self.threadAPIs = []
         self.permissions = ["home","iam","AssignToAll", "development", "management", "nalva"]
         tempRole = Role.Role("Global Admin", "Has all privleges to modify the system", permissions={
@@ -178,166 +180,122 @@ class System:
         self.roles.append(tempRole)
         self.groups.append(tempGroup)
         self.setUpStatus = True
-        self.aiAccessToken = aiAccessToken
+        # Generate access tokens using UUID
+        self.nalaiAccessToken = str(uuid.uuid4())
+        self.nalvaAccessToken = str(uuid.uuid4())
         self.sysFiles = []
+        
+        # Create System APIs group
+        systemAPIGroup = APIGroup.APIGroup("System APIs", "Default system APIs for AI interactions")
+        
         system_apis = [
             API.API(
-                "Get System Users",
-                """Retrieves all users in the system. Returns a list of user objects with their details.
+                "Get System API Groups",
+                """Retrieves all API groups in the system. Returns a list of API group objects with their details and associated APIs.
 Required JSON:
 {}""",
-                "/ai/getSystemUsers",
-                "None"
-            ),
-            API.API(
-                "Get System Roles",
-                """Retrieves all roles in the system. Returns a list of role objects with their details.
-Required JSON:
-{}""",
-                "/ai/getSystemRoles",
-                "None"
-            ),
-            API.API(
-                "Get System Groups",
-                """Retrieves all groups in the system. Returns a list of group objects with their details.
-Required JSON:
-{}""",
-                "/ai/getSystemGroups",
-                "None"
-            ),
-            API.API(
-                "Get System APIs",
-                """Retrieves all APIs in the system. Returns a list of API objects with their details.
-Required JSON:
-{}""",
-                "/ai/getSystemAPIs",
-                "None"
-            ),
-            API.API(
-                "Get System Tasks",
-                """Retrieves all tasks in the system. Returns a list of task objects with their details.
-Required JSON:
-{}""",
-                "/ai/getSystemTasks",
-                "None"
-            ),
-            API.API(
-                "Fetch User",
-                """Retrieves a specific user by username(Not user's name but username@domain.com). Returns user object with details. Note: The username is case sensitive, and do not use this api to fetch users by name, use the getSystemUsers api instead.
-Required JSON:
-{
-    "username": "string (required) - username@domain.com"
-}""",
-                "/ai/fetchUser",
-                "None"
-            ),
-            API.API(
-                "Fetch Role",
-                """Retrieves a specific role by role name. Returns role object with details.
-Required JSON:
-{
-    "roleName": "string (required)"
-}""",
-                "/ai/fetchRole",
-                "None"
-            ),
-            API.API(
-                "Fetch Group",
-                """Retrieves a specific group by group name. Returns group object with details.
-Required JSON:
-{
-    "groupName": "string (required)"
-}""",
-                "/ai/fetchGroup",
-                "None"
-            ),
-            API.API(
-                "Fetch API",
-                """Retrieves a specific API by API name. Returns API object with details.
-Required JSON:
-{
-    "apiName": "string (required)"
-}""",
-                "/ai/fetchAPI",
-                "None"
-            ),
-            API.API(
-                "Fetch Task",
-                """Retrieves a specific task by task ID. Returns task object with details.
-Required JSON:
-{
-    "taskId": "integer (required)"
-}""",
-                "/ai/fetchTask",
-                "None"
+                "/ai/getSystemAPIGroups",
+                "None",
+                False
             ),
             API.API(
                 "Create Task",
-                """Creates a new task with specified details and assigns it to users.
+                """Creates a new task with specified details and assigns it to users. Supports creating reply tasks when previousTaskId is provided.
 Required JSON:
 {
-    "taskName": "string (required)",
-    "taskDescription": "string (required)",
-    "taskStatus": "boolean (required)",
-    "assignees": ["string (required)"] - List of usernames to assign the task to(be specific, do not use vague information like "John" or "Jane", use the getSystemUsers api to fetch the user's username),
-    "creator": "string (required) - username@domain.com"
+    "taskName": "string (required) - Title of the task",
+    "taskDescription": "string (required) - Description of the task",
+    "assignees": ["string (required)"] - List of usernames to assign the task to (use username@domain.com format),
+    "previousTaskId": "integer (optional) - ID of the task this is replying to"
 }""",
                 "/ai/createTask",
-                "None"
+                "None",
+                False
             ),
             API.API(
-                "Update Task",
-                """Updates an existing task with new details.
+                "Reply to Task",
+                """Replies to an existing task, automatically formatting the title as "Reply to: [Original Title]", including the original task creator and current creator as assignees, and closes the original task.
 Required JSON:
 {
-    "taskId": "integer (required)",
-    "taskName": "string (required)",
-    "taskDescription": "string (required)",
-    "taskStatus": "boolean (required)"
+    "taskId": "integer (required) - ID of the task to reply to",
+    "reply": "string (required) - The reply message to the task"
 }""",
-                "/ai/updateTask",
-                "None"
+                "/ai/replyToTask",
+                "None",
+                False
             ),
             API.API(
-                "Delete Task",
-                """Deletes a task by its ID.
+                "Get Accessible Users",
+                """Retrieves all users that the signed-in user can access based on their permissions and group memberships.
 Required JSON:
-{
-    "taskId": "integer (required)"
-}""",
-                "/ai/deleteTask",
-                "None"
+{}""",
+                "/ai/getAccessableUsers",
+                "None",
+                False
             ),
             API.API(
-                "Close Task",
-                """Closes a task by its ID.
+                "Get Role Information",
+                """Retrieves role information for the signed-in user.
 Required JSON:
-{
-    "taskId": "integer (required)"
-}""",
-                "/ai/closeTask",
-                "None"
+{}""",
+                "/ai/getRoleInfo",
+                "None",
+                False
             ),
             API.API(
-                "Assign Users to Task",
-                """Assigns multiple users to a task.
+                "Get Accessible Groups",
+                """Retrieves all groups that the signed-in user can access based on their permissions and group memberships.
+Required JSON:
+{}""",
+                "/ai/getAccessableGroups",
+                "None",
+                False
+            ),
+            API.API(
+                "Query Recent Tasks",
+                """Retrieves recent tasks for the signed-in user based on specified count.
 Required JSON:
 {
-    "assignees": ["string (required)"] - List of usernames to assign,
-    "taskID": "integer (required)"
+    "taskCount": "integer (required) - Number of recent tasks to retrieve"
 }""",
-                "/ai/assignUsersToTask",
-                "None"
-            )
+                "/ai/queryRecentTasks",
+                "None",
+                False
+            ),
+            API.API(
+                "Query Recent Open Tasks",
+                """Retrieves recent open tasks for the signed-in user based on specified count.
+Required JSON:
+{
+    "taskCount": "integer (required) - Number of recent open tasks to retrieve"
+}""",
+                "/ai/queryRecentOpenTasks",
+                "None",
+                False
+            ),
+            API.API(
+                "Get API Group Info",
+                """Retrieves information about a specific API group by its name.
+Required JSON:
+{
+    "apiGroupName": "string (required) - Name of the API group to retrieve",
+}""",
+                "/ai/getAPIGroupInfo",
+                "None",
+                False
+            ),
         ]
 
-        # Add all system APIs to the instance f
+        # Add all system APIs to the System APIs group
         for api in system_apis:
-            self.apis.append(api)
+            systemAPIGroup.addAPI(api)
+        
+        # Add the System APIs group to the instance
+        self.apiGroups.append(systemAPIGroup)
         self.businessRules = [] # String of business rules
         self.saveInstance()
         self.taskQueue = queue.Queue()
-        worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.aiAccessToken,self.businessRules), daemon=True)
+        worker_thread = threading.Thread(target=processTask, args=(self.taskQueue,self.nalaiAccessToken,self.businessRules), daemon=True)
         worker_thread.start()
 
     def saveInstance(self):
@@ -359,7 +317,7 @@ Required JSON:
         domain = ET.SubElement(root,"domain")
         domain.text = self.domain
         aiAccessToken = ET.SubElement(root,"aiAccessToken")
-        aiAccessToken.text = self.aiAccessToken
+        aiAccessToken.text = self.nalaiAccessToken
         groups_save = ET.SubElement(root,"Groups")
         for groupVal in self.groups:
             group_det = groupVal.getDetails()
@@ -435,13 +393,20 @@ Required JSON:
                 task_reply_tab.text = str(taskVal.getReplyTask().getTaskId())
             else:
                 task_reply_tab.text = "None"
+            task_further_nalai_processing_needed = ET.SubElement(task_tab, "FurtherNalAIProcessingNeeded")
+            task_further_nalai_processing_needed.text = str(taskVal.getFurtherNalAIProcessingNeeded())
         apis_save = ET.SubElement(root, "APIs")
-        for apiVal in self.apis:
-            api_tab = ET.SubElement(apis_save, "API")
-            api_tab.set("Name", apiVal.getApiName())
-            api_tab.set("Description", apiVal.getApiDescription())
-            api_tab.set("Endpoint", apiVal.getApiEndpoint())
-            api_tab.set("String", apiVal.getApiString())
+        for apiGroupVal in self.apiGroups:
+            api_group_tab = ET.SubElement(apis_save, "APIGroup")
+            api_group_tab.set("Name", apiGroupVal.apiGroupName)
+            api_group_tab.set("Description", apiGroupVal.apiGroupDescription)
+            for apiVal in apiGroupVal.getAPIs():
+                api_tab = ET.SubElement(api_group_tab, "API")
+                api_tab.set("Name", apiVal.getApiName())
+                api_tab.set("Description", apiVal.getApiDescription())
+                api_tab.set("Endpoint", apiVal.getApiEndpoint())
+                api_tab.set("String", apiVal.getApiString())
+                api_tab.set("DeveloperVisibility", str(apiVal.getDeveloperVisibility()))
         for threadAPIVal in self.threadAPIs:
             thread_api_tab = ET.SubElement(apis_save, "ThreadAPI")
             thread_api_tab.set("Name", threadAPIVal.getThreadName())
@@ -481,8 +446,8 @@ Required JSON:
         self.groups = []
         self.roles = []
         self.users = []
-        self.aiAccessToken = root.find("aiAccessToken").text
-        self.apis = []
+        self.nalaiAccessToken = root.find("aiAccessToken").text
+        self.apiGroups = []
         self.threadAPIs = []
         
         # Load conversation history
@@ -503,7 +468,7 @@ Required JSON:
                     # Create Nalva instance with first message
                     first_msg = next(msg for msg in history if msg["type"] == "user")
                     self.nalvaInstances[username] = Nalva.Nalva(
-                        self.aiAccessToken,
+                        self.nalvaAccessToken,
                         username, 
                         first_msg["message"],
                         first_msg["conversationID"],
@@ -538,7 +503,11 @@ Required JSON:
         for tempGroup_loop in root.find("Groups").findall("Group"):
             usersInGroup = []
             for usname in tempGroup_loop.find("UsersInGroup").findall("username"):
-                usersInGroup.append(findUserByUserName(usname.text,self.users))
+                user = findUserByUserName(usname.text,self.users)
+                if user is not None:  # Only add if user is found
+                    usersInGroup.append(user)
+                else:
+                    print(f"Warning: User {usname.text} not found when loading group {tempGroup_loop.get('Title')}")
             tempGroup = Group.Group(
                 title=tempGroup_loop.get("Title"),
                 description=tempGroup_loop.find("Description").text,
@@ -549,8 +518,15 @@ Required JSON:
             tempUser_loop1.getRole().addUser(tempUser_loop1)
         for temp_User_Loop_Group in root.find("Users").findall("User"):
             thisUserObj = findUserByUserName(temp_User_Loop_Group.get("Username"),self.users)
-            for temp_User_Group_Loop in temp_User_Loop_Group.find("Groups").findall("GroupName"):
-                thisUserObj.addToGroup(findGroupByName(temp_User_Group_Loop.text,self.groups))
+            if thisUserObj is not None:  # Only proceed if user is found
+                for temp_User_Group_Loop in temp_User_Loop_Group.find("Groups").findall("GroupName"):
+                    group = findGroupByName(temp_User_Group_Loop.text,self.groups)
+                    if group is not None:  # Only add if group is found
+                        thisUserObj.addToGroup(group)
+                    else:
+                        print(f"Warning: Group {temp_User_Group_Loop.text} not found when loading user {temp_User_Loop_Group.get('Username')}")
+            else:
+                print(f"Warning: User {temp_User_Loop_Group.get('Username')} not found when loading user groups")
         self.permissions = json.loads(root.find("Permissions").text)
         self.tasks = []
         self.sysFiles = []
@@ -590,7 +566,8 @@ Required JSON:
                 assignedUsers=usersAssigned,
                 creatorUser=creator_user,
                 status=tempTask_loop.find("Status").text.lower() == "true",
-                previousTask=[]  # Will be populated in second pass
+                previousTask=[],  # Will be populated in second pass
+                furtherNalAIProcessingNeeded=tempTask_loop.find("FurtherNalAIProcessingNeeded").text.lower() == "true"
             )
             
             # Store task in map and system
@@ -634,14 +611,23 @@ Required JSON:
                 else:
                     print(f"Warning: Reply task {reply_task_id} not found when loading task {task_id}")
 
-        for tempAPI_loop in root.find("APIs").findall("API"):
-            tempAPI = API.API(
-                apiName=tempAPI_loop.get("Name"),
-                apiDescription=tempAPI_loop.get("Description"),
-                apiEndpoint=tempAPI_loop.get("Endpoint"),
-                apiString=tempAPI_loop.get("String")
+        for tempAPIGroup_loop in root.find("APIs").findall("APIGroup"):
+            tempAPIGroup = APIGroup.APIGroup(
+                apiGroupName=tempAPIGroup_loop.get("Name"),
+                apiGroupDescription=tempAPIGroup_loop.get("Description")
             )
-            self.apis.append(tempAPI)
+            for tempAPI_loop in tempAPIGroup_loop.findall("API"):
+                developer_visibility = tempAPI_loop.get("DeveloperVisibility")
+                developer_visibility_bool = developer_visibility.lower() == "true" if developer_visibility else False
+                tempAPI = API.API(
+                    apiName=tempAPI_loop.get("Name"),
+                    apiDescription=tempAPI_loop.get("Description"),
+                    apiEndpoint=tempAPI_loop.get("Endpoint"),
+                    apiString=tempAPI_loop.get("String"),
+                    developerVisibility=developer_visibility_bool
+                )
+                tempAPIGroup.addAPI(tempAPI)
+            self.apiGroups.append(tempAPIGroup)
         for tempThreadAPI_loop in root.find("APIs").findall("ThreadAPI"):
             tempThreadAPI = ThreadAPI.ThreadAPI(
                 threadName=tempThreadAPI_loop.get("Name"),
@@ -670,7 +656,11 @@ Required JSON:
             roleName (str): The name of the role of the user
             groupNames (list[str]): The names of the groups the user is in
         """
-        tempUser = User.User(username, password, findRoleByTitle(roleName, self.roles), [], [], name)
+        role = findRoleByTitle(roleName, self.roles)
+        if role is None:
+            raise ValueError(f"Role '{roleName}' not found. Cannot create user.")
+            
+        tempUser = User.User(username, password, role, [], [], name)
         self.users.append(tempUser)
         if groupNames is None:
             groupNames = []
@@ -724,6 +714,7 @@ Required JSON:
         print(f"Successfully assigned task {taskID} to user {username}")
         return True
     
+
     def closeTask(self, taskID: int):
         """
         Closes a task and updates all related user task lists
@@ -749,11 +740,27 @@ Required JSON:
     
     def getAIAccessToken(self) -> str:
         """
-        Getter for the AI access token
+        Getter for the AI access token (for backward compatibility)
         Returns:
-            str: The AI access token
+            str: The Nalai access token (task queue)
         """
-        return self.aiAccessToken
+        return self.nalaiAccessToken
+    
+    def getNalaiAccessToken(self) -> str:
+        """
+        Getter for the Nalai access token (task queue)
+        Returns:
+            str: The Nalai access token
+        """
+        return self.nalaiAccessToken
+    
+    def getNalvaAccessToken(self) -> str:
+        """
+        Getter for the Nalva access token
+        Returns:
+            str: The Nalva access token
+        """
+        return self.nalvaAccessToken
     
     def resetUserPassword(self, username:str, newPassword:str):
         """
@@ -1038,29 +1045,85 @@ Required JSON:
     
     def getSysAPIs(self):
         """
-        Method to get the APIs in the system
+        Method to get all APIs in the system (flattened from all groups)
         Returns:
-            list[API]: The list of APIs in the system
+            list[API]: The list of all APIs in the system
         """
-        return self.apis
+        all_apis = []
+        for api_group in self.apiGroups:
+            all_apis.extend(api_group.getAPIs())
+        return all_apis
+    
+    def getSysAPIGroups(self):
+        """
+        Method to get the API groups in the system
+        Returns:
+            list[APIGroup]: The list of API groups in the system
+        """
+        return self.apiGroups
     
     def findAPIByName(self, apiName: str) -> API:
         """
-        Finds an API by its name
+        Finds an API by its name across all API groups
         Args:
             apiName (str): The name of the API
         Returns:
             API: The API with the given name, None if not found
         """
-        return findAPIbyName(apiName, self.apis)
+        for api_group in self.apiGroups:
+            for api in api_group.getAPIs():
+                if api.getApiName() == apiName:
+                    return api
+        return None
     
-    def addAPI(self, api: API):
+    def addAPI(self, api: API, groupName: str = "System APIs"):
         """
-        Adds an API to the system
+        Adds an API to a specific group in the system
         Args:
             api (API): The API to add
+            groupName (str): The name of the group to add the API to (defaults to "System APIs")
         """
-        self.apis.append(api)
+        # Find the group
+        target_group = None
+        for group in self.apiGroups:
+            if group.apiGroupName == groupName:
+                target_group = group
+                break
+        
+        # If group doesn't exist, create it
+        if target_group is None:
+            target_group = APIGroup.APIGroup(groupName, f"API group for {groupName}")
+            self.apiGroups.append(target_group)
+        
+        target_group.addAPI(api)
+    
+    def createAPIGroup(self, groupName: str, groupDescription: str):
+        """
+        Creates a new API group
+        Args:
+            groupName (str): The name of the API group
+            groupDescription (str): The description of the API group
+        """
+        # Check if group already exists
+        for group in self.apiGroups:
+            if group.apiGroupName == groupName:
+                raise ValueError(f"API group '{groupName}' already exists")
+        
+        new_group = APIGroup.APIGroup(groupName, groupDescription)
+        self.apiGroups.append(new_group)
+    
+    def findAPIGroupByName(self, groupName: str) -> APIGroup:
+        """
+        Finds an API group by its name
+        Args:
+            groupName (str): The name of the API group
+        Returns:
+            APIGroup: The API group with the given name, None if not found
+        """
+        for group in self.apiGroups:
+            if group.apiGroupName == groupName:
+                return group
+        return None
         
     def removeAPI(self, api: API):
         """
@@ -1068,15 +1131,19 @@ Required JSON:
         Args:
             api (API): The API to remove
         """
-        self.apis.remove(api)
+        for group in self.apiGroups:
+            if api in group.getAPIs():
+                group.removeAPI(api)
+                break
 
     def modifyAPI(self, apiName: str, apiDescription: str):
         """
         Modifies an API in the system
         Args:
-            api (API): The API to modify
+            apiName (str): The name of the API to modify
+            apiDescription (str): The new description for the API
         """
-        tempAPI = self.findAPIByName(apiName, self.apis)
+        tempAPI = self.findAPIByName(apiName)
         if tempAPI:
             tempAPI.setDescription(apiDescription)
         else:
@@ -1251,7 +1318,7 @@ Required JSON:
         
         # Create or get Nalva instance and get reply
         if username not in self.nalvaInstances:
-            self.nalvaInstances[username] = Nalva.Nalva(self.aiAccessToken, username, firstMessage, conversationID, self.businessRules)
+            self.nalvaInstances[username] = Nalva.Nalva(self.nalvaAccessToken, username, firstMessage, conversationID, self.businessRules)
             # Get the conversation history from the Nalva instance
             conversation = self.nalvaInstances[username].getConversationHistoryByID(conversationID)
             # Add messages to system history
@@ -1360,3 +1427,68 @@ Required JSON:
             list[Task]: The list of tasks in the system
         """
         return self.tasks
+    
+    def getAccessableUsers(self, signedInUser: str) -> list[str]:
+        """
+        Gets the accessable users for a signed in user
+        Args:
+            signedInUser (str): The username of the signed in user
+        Returns:
+            list[str]: The list of accessable users
+        """
+        returningList = []
+        thisUser = self.getUser(signedInUser)
+        if thisUser.getRole().getPermissions()['AssignToAll']:
+            return [user.getUserName() for user in self.users]
+        else:
+            for group in thisUser.getGroups():
+                returningList.extend([user.getUserName() for user in group.getUsers()])
+            return returningList
+        
+    def getAccessableGroups(self, signedInUser: str) -> list[str]:
+        """
+        Gets the accessable groups for a signed in user
+        Args:
+            signedInUser (str): The username of the signed in user
+        Returns:
+            list[str]: The list of accessable groups
+        """
+        returningList = []
+        thisUser = self.getUser(signedInUser)
+        if thisUser.getRole().getPermissions()['AssignToAll']:
+            return [group.getGroupName() for group in self.groups]
+        else:
+            for group in thisUser.getGroups():
+                returningList.append(group.getGroupName())
+            return returningList   
+        
+
+    def queryRecentTasks(self, signedInUser: str, taskCount: int) -> list[Task.Task]:
+        """
+        Queries the recent tasks for a signed in user
+        Args:
+            signedInUser (str): The username of the signed in user
+            taskCount (int): The number of tasks to query
+        Returns:
+            list[Task]: The list of recent tasks
+        """
+        thisUserTasks = []
+        for task in self.tasks:
+            if task.getCreatorUser().getUserName() == signedInUser:
+                thisUserTasks.append(task)
+        return thisUserTasks[-taskCount:]
+    
+    def queryRecentOpenTasks(self, signedInUser: str, taskCount: int) -> list[Task.Task]:
+        """
+        Queries the recent open tasks for a signed in user
+        Args:
+            signedInUser (str): The username of the signed in user
+            taskCount (int): The number of tasks to query
+        Returns:
+            list[Task]: The list of recent open tasks
+        """
+        thisUserTasks = []
+        for task in self.tasks:
+            if task.getStatus() and task.getCreatorUser().getUserName() == signedInUser:
+                thisUserTasks.append(task)
+        return thisUserTasks[-taskCount:]

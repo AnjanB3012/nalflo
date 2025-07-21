@@ -248,7 +248,7 @@ function ViewAPI() {
                         <label>Description:</label>
                         <input
                             type="text"
-                            value={api.apiDescription}
+                            value={api.developerVisibility ? api.apiDescription : "N/A"}
                             readOnly
                             style={{ width: "100%", padding: "8px", marginTop: "5px", backgroundColor: "#f5f5f5" }}
                         />
@@ -269,7 +269,7 @@ function ViewAPI() {
                         <Editor
                             height="250px"
                             defaultLanguage="python"
-                            value={formatApiString(api.apiString)}
+                            value={api.developerVisibility ? formatApiString(api.apiString) : "N/A"}
                             theme="light"
                             options={{ readOnly: true }}
                         />

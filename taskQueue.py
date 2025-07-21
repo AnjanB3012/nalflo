@@ -5,8 +5,24 @@ from google.genai import types
 import json
 from dotenv import load_dotenv
 import requests
+from pyhold import pyhold
 
-def processTask(taskQueue, aiAccessToken, businessRules):
+# Initialize pyhold for token storage
+task_queue_tokens = pyhold("testing.xml")
+
+# Initialize totalTokens if it doesn't exist
+if "totalTokens" not in task_queue_tokens:
+    task_queue_tokens["totalTokens"] = 0
+
+def getTotalTokens():
+    """Get the total number of tokens used by task queue"""
+    return task_queue_tokens.get("totalTokens", 0)
+
+def resetTokenCount():
+    """Reset the total token count to 0"""
+    task_queue_tokens["totalTokens"] = 0
+
+def processTask(taskQueue, nalaiAccessToken, businessRules, signedInUser):
     def perform_ai_call(prompt, aiAccessToken_token, businessRules_param):
         load_dotenv()
         dict_response = {
@@ -30,34 +46,38 @@ def processTask(taskQueue, aiAccessToken, businessRules):
         
         while dict_response["Need_To_Make_Another_Call"]:
             print(next_prompt)
-            try:
-                client = genai.Client(
-                    api_key = os.getenv("GOOGLE_API_KEY")
-                )
-                model = "gemini-2.5-flash-preview-05-20"
-                
-                generate_content_config = types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=genai.types.Schema(
-                        type = genai.types.Type.OBJECT,
-                        required = ["API_Call_Needed", "Need_To_Make_Another_Call"],
-                        properties = {
-                            "API_Call_Needed": genai.types.Schema(
-                                type = genai.types.Type.BOOLEAN,
-                            ),
-                            "API_EndPoint": genai.types.Schema(
-                                type = genai.types.Type.STRING,
-                            ),
-                            "Body_Parameters_JSON": genai.types.Schema(
-                                type = genai.types.Type.STRING,
-                            ),
-                            "Need_To_Make_Another_Call": genai.types.Schema(
-                                type = genai.types.Type.BOOLEAN,
-                            ),
-                        },
-                    ),
-                    system_instruction=[
-                        types.Part.from_text(text="""You are Nal AI, an intelligent agent designed to understand tasks and perform actions by interacting with APIs.
+            retry_waits = [60, 3600]  # 1 minute, then 1 hour
+            retry_index = 0
+            while True:
+                try:
+                    client = genai.Client(
+                        api_key = os.getenv("GOOGLE_API_KEY")
+                    )
+                    model = "gemini-2.5-flash-preview-05-20"
+                    
+                    generate_content_config = types.GenerateContentConfig(
+                        temperature=0.5,
+                        response_mime_type="application/json",
+                        response_schema=genai.types.Schema(
+                            type = genai.types.Type.OBJECT,
+                            required = ["API_Call_Needed", "Need_To_Make_Another_Call"],
+                            properties = {
+                                "API_Call_Needed": genai.types.Schema(
+                                    type = genai.types.Type.BOOLEAN,
+                                ),
+                                "API_EndPoint": genai.types.Schema(
+                                    type = genai.types.Type.STRING,
+                                ),
+                                "Body_Parameters_JSON": genai.types.Schema(
+                                    type = genai.types.Type.STRING,
+                                ),
+                                "Need_To_Make_Another_Call": genai.types.Schema(
+                                    type = genai.types.Type.BOOLEAN,
+                                ),
+                            },
+                        ),
+                        system_instruction=[
+                            types.Part.from_text(text="""You are Nal AI, an intelligent agent designed to understand tasks and perform actions by interacting with APIs.
 Your job is to read a task completely, understand the required actions, and perform them step-by-step.
 
 You must carefully analyze the task and determine:
@@ -171,56 +191,90 @@ Follow any specific business rules provided below while performing tasks.
 
 Business Rules:
 {businessRules_param}"""),
-                    ],
-                )
-                output = ""
-                for chunk in client.models.generate_content_stream(
-                    model=model,
-                    contents=conversation_history,
-                    config=generate_content_config,
-                ):
-                    output += chunk.text
-                dict_response = json.loads(output)
-                print(dict_response)
-                if dict_response["API_Call_Needed"]:
-                    response = perform_api_call(dict_response["API_EndPoint"], json.loads(dict_response["Body_Parameters_JSON"]), aiAccessToken_token)
-                    next_prompt = response
-                    # Append the API response to conversation history
-                    conversation_history.append(
-                        types.Content(
-                            role="model",
-                            parts=[
-                                types.Part.from_text(text=output),
-                            ],
-                        )
+                        ],
                     )
-                    conversation_history.append(
-                        types.Content(
-                            role="user",
-                            parts=[
-                                types.Part.from_text(text=next_prompt),
-                            ],
-                        )
+                    output = ""
+                    # Count tokens for the current conversation history before making the call
+                    token_count_response = client.models.count_tokens(
+                        model=model,
+                        contents=conversation_history
                     )
-            except Exception as e:
-                print(f"Error processing task: {e}")
-                dict_response["Need_To_Make_Another_Call"] = False
+                    current_tokens = token_count_response.total_tokens
+                    
+                    # Generate content and collect response
+                    response_stream = client.models.generate_content_stream(
+                        model=model,
+                        contents=conversation_history,
+                        config=generate_content_config,
+                    )
+                    
+                    # Collect the response and get usage metadata
+                    response_chunks = []
+                    for chunk in response_stream:
+                        response_chunks.append(chunk)
+                        output += chunk.text
+                    
+                    # Get the last chunk to access usage metadata
+                    if response_chunks:
+                        last_chunk = response_chunks[-1]
+                        if hasattr(last_chunk, 'usage_metadata') and last_chunk.usage_metadata:
+                            # Add the total tokens used in this call to our counter
+                            current_total = task_queue_tokens.get("totalTokens", 0)
+                            task_queue_tokens["totalTokens"] = current_total + last_chunk.usage_metadata.total_token_count
+                        else:
+                            # Fallback: add the counted tokens if usage_metadata is not available
+                            current_total = task_queue_tokens.get("totalTokens", 0)
+                            task_queue_tokens["totalTokens"] = current_total + current_tokens
+                    
+                    dict_response = json.loads(output)
+                    print(dict_response)
+                    if dict_response["API_Call_Needed"]:
+                        response = perform_api_call(dict_response["API_EndPoint"], json.loads(dict_response["Body_Parameters_JSON"]), aiAccessToken_token, signedInUser)
+                        next_prompt = response
+                        # Append the API response to conversation history
+                        conversation_history.append(
+                            types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part.from_text(text=output),
+                                ],
+                            )
+                        )
+                        conversation_history.append(
+                            types.Content(
+                                role="user",
+                                parts=[
+                                    types.Part.from_text(text=next_prompt),
+                                ],
+                            )
+                        )
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    print(f"Error processing task: {e}")
+                    wait_time = retry_waits[retry_index % 2]
+                    print(f"Waiting for {wait_time} seconds before retrying...")
+                    time.sleep(wait_time)
+                    retry_index += 1
 
-    def perform_api_call(api_end_point, body_parameters_json, aiAccessToken_param):
+    def perform_api_call(api_end_point, body_parameters_json, aiAccessToken_param, signedInUser):
         body_parameters_json["aiAccessToken"] = aiAccessToken_param
-        response = requests.post(f"http://localhost:8080{api_end_point}", json=body_parameters_json)
-        if response.status_code == 200:
-            print(response.json())
-            return json.dumps(response.json())
-            
-        else:
-            return "Error occurred while making API call"
+        body_parameters_json["signedInUser"] = signedInUser
+        try:
+            response = requests.post(f"http://localhost:8080{api_end_point}", json=body_parameters_json)
+            if response.status_code == 200:
+                print(response.json())
+                return json.dumps(response.json())
+            else:
+                return "Error occurred while making API call"
+        except requests.exceptions.RequestException as e:
+            return f"Network error occurred: {str(e)}"
     
     while True:
         if not taskQueue.empty():
             task = taskQueue.get()
             try:
-                perform_ai_call(str(task), aiAccessToken, businessRules)
+                if task.getFurtherNalAIProcessingNeeded():
+                    perform_ai_call(str(task), nalaiAccessToken, businessRules, task.getCreator().getUserName())
             except Exception as e:
                 print(f"Error processing task: {e}")
             finally:

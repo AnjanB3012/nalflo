@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar.jsx";
 import Editor from "@monaco-editor/react";
@@ -9,9 +9,41 @@ function CreateNewAPI() {
     const [apiDescription, setAPIDescription] = useState("");
     const [apiEndpoint, setAPIEndpoint] = useState("");
     const [apiCode, setAPICode] = useState("");
+    const [apiGroup, setAPIGroup] = useState("System APIs");
+    const [apiGroups, setAPIGroups] = useState([]);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const navigate = useNavigate();
+
+    // Fetch API groups on component mount
+    useEffect(() => {
+        const fetchAPIGroups = async () => {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) return;
+
+            const parsedCookie = JSON.parse(cookieData);
+            const cookieToken = parsedCookie.token;
+
+            try {
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/api/apis/getAllAPIGroups`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cookie_token: cookieToken }),
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setAPIGroups(data.apiGroups);
+                }
+            } catch (err) {
+                console.error("Error fetching API groups:", err);
+            }
+        };
+
+        fetchAPIGroups();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -50,6 +82,7 @@ function CreateNewAPI() {
                     api_description: apiDescription,
                     api_endpoint: apiEndpoint,
                     api_string: formattedCode, // send the transformed string
+                    api_group: apiGroup,
                 }),
             });
 
@@ -105,6 +138,21 @@ function CreateNewAPI() {
                             placeholder="/api/..."
                             style={{ width: "100%", padding: "8px", marginTop: "5px" }}
                         />
+                    </div>
+
+                    <div>
+                        <label>API Group:</label>
+                        <select
+                            value={apiGroup}
+                            onChange={(e) => setAPIGroup(e.target.value)}
+                            style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+                        >
+                            {apiGroups.map((group) => (
+                                <option key={group.apiGroupName} value={group.apiGroupName}>
+                                    {group.apiGroupName}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>

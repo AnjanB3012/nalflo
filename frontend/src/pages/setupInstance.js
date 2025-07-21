@@ -64,7 +64,7 @@ function SetupInstance() {
                     }),
                 });
                 const data = await response.json();
-                if (data.message === "Success") {
+                if (data.message === "Instance is Setup") {
                     navigate("/login");
                 } else {
                     alert("Setup failed. Please try again.");

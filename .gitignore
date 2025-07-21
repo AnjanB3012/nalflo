@@ -13,3 +13,4 @@ uploads/
 __pycache__/
 system/__pycache__/
 test.py
+testing.xml

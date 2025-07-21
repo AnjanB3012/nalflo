@@ -73,6 +73,11 @@
   color: white;
 }
 
+.button-secondary {
+  background: linear-gradient(90deg, #6b7280, #4b5563);
+  color: white;
+}
+
 .button-group {
   display: flex;
   gap: 0.5rem;

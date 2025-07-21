@@ -183,3 +183,22 @@ class User:
             self.groups.remove(group)
         except ValueError:
             print(f"User {self.userName} is not in group {group.getDetails()[0]}")
+
+    def toAIString(self) -> str:
+        """
+        Converts the user to an AI string
+        Returns:
+            str: The user as an AI string
+        """
+        returningString = f"""
+        <User_Name>{self.userName}</User_Name>
+        <User_Name>{self.name}</User_Name>
+        <User_Role_Info>
+        {str(self.roleInfo)}
+        </User_Role_Info>
+        <User_In_Groups>
+        """
+        for i in self.groups:
+            returningString += str(i)
+        returningString += "</User_In_Groups>"
+        return returningString

@@ -128,3 +128,15 @@ class Role:
             "permissions": self.permissions,
             "users": [user.getUserName() for user in self.users]
         }
+    
+    def toAIString(self) -> str:
+        """
+        Converts the role to an AI string
+        Returns:
+            str: The role as an AI string
+        """
+        return f"""
+        <Role_Title>{self.roleTitle}</Role_Title>
+        <Role_Description>{self.roleDescription}</Role_Description>
+        <Role_Permissions>{str(self.permissions)}</Role_Permissions>
+        """

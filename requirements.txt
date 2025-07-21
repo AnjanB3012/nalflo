@@ -8,3 +8,4 @@ pyhold
 werkzeug
 uuid
 google-genai
+gunicorn
