@@ -18,6 +18,7 @@ import signal
 import sys
 from threading import Event
 import time
+import textwrap
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
@@ -35,7 +36,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 active_threads = {}  # Dictionary to track active threads and their stop events
 
 def stringFunctionMaker(inputFunctionString):
-    return "\n    ".join(
+    return "\n".join(
         repr(line)[1:-1]
         for line in inputFunctionString.split("<break>")
     )
@@ -105,7 +106,7 @@ def getSystemAPIGroups():
         api_group_strings = [api_group.toAIString() for api_group in api_groups if api_group is not None]
         return jsonify({"message": "Success", "apiGroups": api_group_strings})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
     
 @app.route('/ai/getAPIGroupInfo', methods=['POST'])
 def getAPIGroupInfo():
@@ -115,7 +116,7 @@ def getAPIGroupInfo():
         api_group = thisSystem.findAPIGroupByName(data.get('apiGroupName'))
         return jsonify({"message": "Success", "apiGroup": api_group.toAIString()})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
 
 @app.route('/ai/createTask', methods=['POST'])
 def createTask():
@@ -144,7 +145,8 @@ def createTask():
             data.get('taskDescription'), 
             data.get('assignees'), 
             creatorUser=creatorUser,
-            previousTask=[previous_task] if previous_task else None
+            previousTask=[previous_task] if previous_task else None,
+            furtherNalAIProcessingNeeded=data.get('furtherNalAIProcessingNeeded', False)
         )
         
         # If this is a reply task, set the replyTask field on the previous task
@@ -153,7 +155,7 @@ def createTask():
         
         return jsonify({"message": "Success", "taskId": tempTask.getTaskId()})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
     
 @app.route('/ai/replyToTask', methods=['POST'])
 def replyToTask():
@@ -187,7 +189,7 @@ def replyToTask():
         newTask = thisSystem.createTask(newTitle, data.get('reply'), newAssignees, creator_user, [task, *[tempTask for tempTask in task.getPreviousTask()]])
         return jsonify({"message": "Success", "taskId": newTask.getTaskId()})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message":"access denied"})
     
 @app.route('/ai/getAccessableUsers', methods=['POST'])
 def getAccessableUsers():
@@ -200,7 +202,7 @@ def getAccessableUsers():
             returningStr += user.toAIString()
         return jsonify({"message": "Success", "users": returningStr})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
     
 @app.route('/ai/getRoleInfo', methods=['POST'])
 def getRoleInfo():
@@ -210,7 +212,7 @@ def getRoleInfo():
         role_info = thisSystem.getUser(data.get('signedInUser')).getRole().toAIString()
         return jsonify({"message": "Success", "roleInfo": role_info})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
     
 @app.route('/ai/getAccessableGroups', methods=['POST'])
 def getAccessableGroups():
@@ -223,7 +225,7 @@ def getAccessableGroups():
             returningStr += group.toAIString()
         return jsonify({"message": "Success", "groups": returningStr})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
     
 @app.route('/ai/queryRecentTasks', methods=['POST'])
 def queryRecentTasks():
@@ -236,7 +238,7 @@ def queryRecentTasks():
             returningStr += task.toAIString()
         return jsonify({"message": "Success", "tasks": returningStr})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
 
 @app.route('/ai/queryRecentOpenTasks', methods=['POST'])
 def queryRecentOpenTasks():
@@ -249,7 +251,17 @@ def queryRecentOpenTasks():
             returningStr += task.toAIString()
         return jsonify({"message": "Success", "tasks": returningStr})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
+    
+@app.route('/ai/closeTask', methods=['POST'])
+def aiCloseTask():
+    data = request.get_json()
+    ai_access_token = data.get('aiAccessToken')
+    if ai_access_token == thisSystem.getNalaiAccessToken() or ai_access_token == thisSystem.getNalvaAccessToken():
+        thisSystem.closeTask(data.get('taskId'))
+        return jsonify({"message": "Success"})
+    else:
+        return jsonify({"message":"access denied"})
 
 # Communication APIs go here
 @app.route('/api/homeCheck', methods=['GET'])
@@ -706,6 +718,7 @@ def createNewTask():
             task_description = data.get('task_description')
             task_assignees = data.get('task_assignees')
             previous_task_id = data.get('previous_task_id')
+            no_ai_processing = data.get('no_ai_processing', False)
             
             # Validate required fields
             if not task_title or not task_description:
@@ -744,7 +757,8 @@ def createNewTask():
                     task_description, 
                     task_assignees, 
                     user,
-                    previousTask=[previous_task] if previous_task else []
+                    previousTask=[previous_task] if previous_task else [],
+                    furtherNalAIProcessingNeeded=not no_ai_processing
                 )
                 
                 # If this is a reply task, set the replyTask field on the previous task
@@ -857,17 +871,48 @@ def addNewAPI():
             api_endpoint = data.get('api_endpoint')
             api_string = data.get('api_string')
             api_group = data.get('api_group', 'System APIs')  # Default to System APIs if not specified
-            tempAPI = API.API(apiName=api_name, apiDescription=api_description, apiEndpoint=api_endpoint, apiString=api_string)
+            ai_processing_models = data.get('ai_processing_models', [])
+            tempAPI = API.API(apiName=api_name, apiDescription=api_description, apiEndpoint=api_endpoint, apiString=api_string, aiProcessingModels=ai_processing_models)
             thisSystem.addAPI(tempAPI, api_group)
             functionStr = stringFunctionMaker(api_string)
             
             # Convert API name to function name format (lowercase with underscores)
             function_name = api_name.lower().replace(' ', '_')
             
+            # AI access token logic
+            ai_token_check = ""
+            if 'NalAI' in ai_processing_models and 'Nalva' in ai_processing_models:
+                ai_token_check = (
+                    "if data.get('aiAccessToken') == thisSystem.getNalaiAccessToken() or "
+                    "data.get('aiAccessToken') == thisSystem.getNalvaAccessToken():\n"
+                )
+            elif 'NalAI' in ai_processing_models:
+                ai_token_check = "if data.get('aiAccessToken') == thisSystem.getNalaiAccessToken():\n"
+            elif 'Nalva' in ai_processing_models:
+                ai_token_check = "if data.get('aiAccessToken') == thisSystem.getNalvaAccessToken():\n"
+            
+            # Indent user code for inside the if block (4 spaces per block)
+            def indent_code(code, num_spaces):
+                return textwrap.indent(code, ' ' * num_spaces)
+            
+            if ai_token_check:
+                user_code = (
+                    f"{ai_token_check}"
+                    f"{indent_code(functionStr, 12)}\n"
+                    f"        else:\n"
+                    f"            return jsonify({{'message': 'access denied'}})\n"
+                )
+            else:
+                user_code = indent_code(functionStr, 4) + "\n"
+            
             new_endpoint = (
                 f"@app.route('{api_endpoint}', methods=['GET', 'POST'])\n"
                 f"def {function_name}():\n"
-                f"    {functionStr}\n"
+                f"    try:\n"
+                f"        data = request.get_json()\n"
+                f"        {user_code}"
+                f"    except Exception as e:\n"
+                f"        return jsonify({{'error': str(e)}}), 500\n"
             )
             with open("app.py", "r") as f:
                 content = f.read()
@@ -881,7 +926,7 @@ def addNewAPI():
         else:
             return jsonify({"message": "Permission Denied"})
     else:
-        return jsonify({"message": "Failed"})
+        return jsonify({"message": "access denied"})
     
 @app.route('/api/apis/getAllAPIs', methods=['POST'])
 def getAllAPIs():
@@ -1497,8 +1542,8 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 # Register signal handlers
-signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
-signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 if __name__ == '__main__':
     import os

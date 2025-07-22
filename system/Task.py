@@ -123,3 +123,6 @@ class Task:
         <Task_Reply_Task>{self.replyTask}</Task_Reply_Task>
         <Task_Further_NalAI_Processing_Needed>{self.furtherNalAIProcessingNeeded}</Task_Further_NalAI_Processing_Needed>
         """
+    
+    def getFurtherNalAIProcessingNeeded(self) -> bool:
+        return self.furtherNalAIProcessingNeeded

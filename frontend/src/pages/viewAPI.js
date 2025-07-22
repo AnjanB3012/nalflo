@@ -265,6 +265,27 @@ function ViewAPI() {
                     </div>
 
                     <div>
+                        <label>AI Processing Models:</label>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                            {Array.isArray(api.aiProcessingModels) && api.aiProcessingModels.length > 0 ? (
+                                api.aiProcessingModels.map((model) => (
+                                    <span key={model} style={{
+                                        display: 'inline-block',
+                                        backgroundColor: '#e0e0e0',
+                                        color: '#333',
+                                        borderRadius: '12px',
+                                        padding: '4px 12px',
+                                        fontSize: '13px',
+                                        fontWeight: 500,
+                                    }}>{model}</span>
+                                ))
+                            ) : (
+                                <span style={{ color: '#888', fontStyle: 'italic' }}>None</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
                         <label>Python Code:</label>
                         <Editor
                             height="250px"

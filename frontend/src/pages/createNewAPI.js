@@ -14,6 +14,7 @@ function CreateNewAPI() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const navigate = useNavigate();
+    const [aiProcessingModels, setAiProcessingModels] = useState([]);
 
     // Fetch API groups on component mount
     useEffect(() => {
@@ -45,6 +46,14 @@ function CreateNewAPI() {
         fetchAPIGroups();
     }, []);
 
+    const handleModelChange = (model) => {
+        setAiProcessingModels((prev) =>
+            prev.includes(model)
+                ? prev.filter((m) => m !== model)
+                : [...prev, model]
+        );
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const cookieData = localStorage.getItem("local_cookie");
@@ -59,13 +68,8 @@ function CreateNewAPI() {
         // Reformat the code to match API expectation
         const formattedCode = apiCode
             .replace(/\r\n|\r/g, "\n") // Normalize all line endings
+            .replace(/\t/g, "    ")      // Replace tabs with 4 spaces
             .split("\n")
-            .map(line => {
-                const trimmedLine = line.replace(/^\s*/, ""); // remove leading spaces
-                const indentLevel = Math.floor((line.length - trimmedLine.length) / 4);
-                const escapedLine = trimmedLine.replace(/"/g, '\\"');
-                return " ".repeat(indentLevel * 4) + escapedLine;
-            })
             .join("<break>");
 
 
@@ -83,6 +87,7 @@ function CreateNewAPI() {
                     api_endpoint: apiEndpoint,
                     api_string: formattedCode, // send the transformed string
                     api_group: apiGroup,
+                    ai_processing_models: aiProcessingModels,
                 }),
             });
 
@@ -164,6 +169,28 @@ function CreateNewAPI() {
                             theme="light"
                             onChange={(value) => setAPICode(value || "")}
                         />
+                    </div>
+
+                    <div>
+                        <label>AI Processing Models:</label>
+                        <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={aiProcessingModels.includes('NalAI')}
+                                    onChange={() => handleModelChange('NalAI')}
+                                />
+                                NalAI
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={aiProcessingModels.includes('Nalva')}
+                                    onChange={() => handleModelChange('Nalva')}
+                                />
+                                Nalva
+                            </label>
+                        </div>
                     </div>
 
                     {error && <p style={{ color: "red" }}>{error}</p>}

@@ -12,6 +12,7 @@ function CreateNewTask() {
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [error, setError] = useState('');
     const [previousTask, setPreviousTask] = useState(null);
+    const [noAIProcessing, setNoAIProcessing] = useState(false);
     const location = useLocation();
 
     useEffect(() => {
@@ -89,7 +90,8 @@ function CreateNewTask() {
                     task_title: title,
                     task_description: description,
                     task_assignees: selectedUsers,
-                    previous_task_id: previousTask?.taskId
+                    previous_task_id: previousTask?.taskId,
+                    no_ai_processing: noAIProcessing
                 }),
             });
             const data = await response.json();
@@ -131,6 +133,17 @@ function CreateNewTask() {
                                 required
                                 rows="4"
                             />
+                        </div>
+                        <div className="form-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={noAIProcessing}
+                                    onChange={e => setNoAIProcessing(e.target.checked)}
+                                    style={{ marginRight: '8px' }}
+                                />
+                                Do NOT do AI processing on this task
+                            </label>
                         </div>
                         <div className="form-group">
                             <label>Assign Users</label>

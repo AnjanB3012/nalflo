@@ -14,3 +14,4 @@ __pycache__/
 system/__pycache__/
 test.py
 testing.xml
+instance*.xml

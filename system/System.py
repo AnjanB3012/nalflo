@@ -196,7 +196,8 @@ Required JSON:
 {}""",
                 "/ai/getSystemAPIGroups",
                 "None",
-                False
+                False,
+                ["NalAI","Nalva"]
             ),
             API.API(
                 "Create Task",
@@ -210,7 +211,8 @@ Required JSON:
 }""",
                 "/ai/createTask",
                 "None",
-                False
+                False,
+                ["NalAI","Nalva"]
             ),
             API.API(
                 "Reply to Task",
@@ -218,11 +220,13 @@ Required JSON:
 Required JSON:
 {
     "taskId": "integer (required) - ID of the task to reply to",
-    "reply": "string (required) - The reply message to the task"
+    "reply": "string (required) - The reply message to the task",
+    "furtherNalAIProcessingNeeded": "boolean (optional) - Whether further NalAI(Backend agent that can be used to process the task) processing is needed"
 }""",
                 "/ai/replyToTask",
                 "None",
-                False
+                False,
+                ["NalAI","Nalva"]
             ),
             API.API(
                 "Get Accessible Users",
@@ -249,7 +253,8 @@ Required JSON:
 {}""",
                 "/ai/getAccessableGroups",
                 "None",
-                False
+                False,
+                ["NalAI","Nalva"]
             ),
             API.API(
                 "Query Recent Tasks",
@@ -271,7 +276,8 @@ Required JSON:
 }""",
                 "/ai/queryRecentOpenTasks",
                 "None",
-                False
+                False,
+                ["NalAI","Nalva"]
             ),
             API.API(
                 "Get API Group Info",
@@ -282,7 +288,20 @@ Required JSON:
 }""",
                 "/ai/getAPIGroupInfo",
                 "None",
-                False
+                False,
+                ["NalAI","Nalva"]
+            ),
+            API.API(
+                "Close Task",
+                """Closes a task by its ID.
+Required JSON:
+{
+    "taskId": "integer (required) - ID of the task to close"
+}""",
+                "/ai/closeTask",
+                "None",
+                False,
+                ["NalAI","Nalva"]
             ),
         ]
 
@@ -318,6 +337,8 @@ Required JSON:
         domain.text = self.domain
         aiAccessToken = ET.SubElement(root,"aiAccessToken")
         aiAccessToken.text = self.nalaiAccessToken
+        aiNalvaAccessToken = ET.SubElement(root, "aiNalvaAccessToken")
+        aiNalvaAccessToken.text = self.nalvaAccessToken
         groups_save = ET.SubElement(root,"Groups")
         for groupVal in self.groups:
             group_det = groupVal.getDetails()
@@ -407,6 +428,7 @@ Required JSON:
                 api_tab.set("Endpoint", apiVal.getApiEndpoint())
                 api_tab.set("String", apiVal.getApiString())
                 api_tab.set("DeveloperVisibility", str(apiVal.getDeveloperVisibility()))
+                api_tab.set("AiProcessingModels", json.dumps(apiVal.getAiProcessingModels()))
         for threadAPIVal in self.threadAPIs:
             thread_api_tab = ET.SubElement(apis_save, "ThreadAPI")
             thread_api_tab.set("Name", threadAPIVal.getThreadName())
@@ -447,6 +469,7 @@ Required JSON:
         self.roles = []
         self.users = []
         self.nalaiAccessToken = root.find("aiAccessToken").text
+        self.nalvaAccessToken = root.find("aiNalvaAccessToken").text
         self.apiGroups = []
         self.threadAPIs = []
         
@@ -619,12 +642,18 @@ Required JSON:
             for tempAPI_loop in tempAPIGroup_loop.findall("API"):
                 developer_visibility = tempAPI_loop.get("DeveloperVisibility")
                 developer_visibility_bool = developer_visibility.lower() == "true" if developer_visibility else False
+                aiProcessingModels = tempAPI_loop.get("AiProcessingModels")
+                if aiProcessingModels is not None:
+                    aiProcessingModels = json.loads(aiProcessingModels)
+                else:
+                    aiProcessingModels = []
                 tempAPI = API.API(
                     apiName=tempAPI_loop.get("Name"),
                     apiDescription=tempAPI_loop.get("Description"),
                     apiEndpoint=tempAPI_loop.get("Endpoint"),
                     apiString=tempAPI_loop.get("String"),
-                    developerVisibility=developer_visibility_bool
+                    developerVisibility=developer_visibility_bool,
+                    aiProcessingModels=aiProcessingModels
                 )
                 tempAPIGroup.addAPI(tempAPI)
             self.apiGroups.append(tempAPIGroup)
@@ -973,7 +1002,7 @@ Required JSON:
         # Remove group from system
         self.groups.remove(group)
 
-    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task.Task] | None = None):
+    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task.Task] | None = None, furtherNalAIProcessingNeeded: bool = True):
         """
         Method to create a new task
         Args:
@@ -982,6 +1011,7 @@ Required JSON:
             taskAssignees (list[str]): The list of usernames to assign the task to
             creatorUser (User): The user creating the task
             previousTask (list[Task]): The list of previous tasks (for replies)
+            furtherNalAIProcessingNeeded (bool): Whether to do further AI processing (default True)
         """
         # Check for duplicate tasks
         for existing_task in self.tasks:
@@ -999,7 +1029,7 @@ Required JSON:
                 assignedUsers.append(tempUser)
         if previousTask is None:
             previousTask = []
-        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.now(), assignedUsers, creatorUser, True, previousTask)
+        tempTask = Task.Task(taskId, taskTitle, taskDescription, datetime.now(), assignedUsers, creatorUser, True, previousTask, furtherNalAIProcessingNeeded)
         self.tasks.append(tempTask)
         # Add task to creator's task list
         creatorUser.addTask(tempTask)
@@ -1488,7 +1518,11 @@ Required JSON:
             list[Task]: The list of recent open tasks
         """
         thisUserTasks = []
+        numberQueried = 0
         for task in self.tasks:
-            if task.getStatus() and task.getCreatorUser().getUserName() == signedInUser:
+            if task.getStatus() and (task.getCreatorUser().getUserName() == signedInUser or signedInUser in [user.getUserName() for user in task.getAssignedUsers()]):
                 thisUserTasks.append(task)
-        return thisUserTasks[-taskCount:]
+                numberQueried += 1
+            if numberQueried >= taskCount:
+                break
+        return thisUserTasks

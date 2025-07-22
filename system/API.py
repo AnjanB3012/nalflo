@@ -7,7 +7,7 @@ class API:
         apiEndpoint (str): The endpoint of the API
     """
 
-    def __init__(self, apiName: str, apiDescription: str, apiEndpoint: str, apiString: str, developerVisibility: bool = True):
+    def __init__(self, apiName: str, apiDescription: str, apiEndpoint: str, apiString: str, developerVisibility: bool = True, aiProcessingModels: list[str] = []):
         """
         Initializes the API object
         Args:
@@ -19,6 +19,7 @@ class API:
         self.apiEndpoint = apiEndpoint
         self.apiString = apiString
         self.developerVisibility = developerVisibility
+        self.aiProcessingModels = aiProcessingModels
     
     def getApiName(self) -> str:
         """
@@ -68,6 +69,22 @@ class API:
         """
         self.developerVisibility = newDeveloperVisibility
 
+    def getAiProcessingModels(self) -> list[str]:
+        """
+        Getter for the AI processing models of the API
+        Returns:
+            list[str]: The AI processing models of the API
+        """
+        return self.aiProcessingModels
+
+    def setAiProcessingModels(self, newAiProcessingModels: list[str]):
+        """
+        Setter for the AI processing models of the API
+        Args:
+            newAiProcessingModels (list[str]): The new AI processing models of the API
+        """
+        self.aiProcessingModels = newAiProcessingModels
+
     def __str__(self) -> str:
         """
         String representation of the API
@@ -108,7 +125,8 @@ class API:
             "apiDescription": self.apiDescription,
             "apiEndpoint": self.apiEndpoint,
             "apiString": self.apiString,
-            "developerVisibility": self.developerVisibility
+            "developerVisibility": self.developerVisibility,
+            "aiProcessingModels": self.aiProcessingModels
         }
     
     def toAIString(self) -> str:
@@ -131,3 +149,4 @@ class API:
         {self.developerVisibility}
         </API_Developer_Visibility>
         """
+    

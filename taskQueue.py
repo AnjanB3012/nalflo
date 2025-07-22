@@ -22,8 +22,8 @@ def resetTokenCount():
     """Reset the total token count to 0"""
     task_queue_tokens["totalTokens"] = 0
 
-def processTask(taskQueue, nalaiAccessToken, businessRules, signedInUser):
-    def perform_ai_call(prompt, aiAccessToken_token, businessRules_param):
+def processTask(taskQueue, nalaiAccessToken, businessRules):
+    def perform_ai_call(prompt, aiAccessToken_token, businessRules_param, signedInUser):
         load_dotenv()
         dict_response = {
             "API_Call_Needed": False,
@@ -274,7 +274,8 @@ Business Rules:
             task = taskQueue.get()
             try:
                 if task.getFurtherNalAIProcessingNeeded():
-                    perform_ai_call(str(task), nalaiAccessToken, businessRules, task.getCreator().getUserName())
+                    # Use the task creator as signedInUser
+                    perform_ai_call(str(task), nalaiAccessToken, businessRules, task.getCreatorUser().getUserName())
             except Exception as e:
                 print(f"Error processing task: {e}")
             finally:

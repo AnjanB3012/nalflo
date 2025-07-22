@@ -17,6 +17,7 @@ function TaskView() {
     const [parsedCookie, setParsedCookie] = useState(null);
     const [taskTimeline, setTaskTimeline] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [noAIProcessing, setNoAIProcessing] = useState(false);
 
     // Function to recursively fetch all previous tasks
     const fetchTaskChain = async (taskId, cookieToken) => {
@@ -258,7 +259,8 @@ function TaskView() {
                     task_title: task.title.startsWith("Reply to:") ? task.title : `Reply to: ${task.title}`,
                     task_description: replyDescription,
                     task_assignees: selectedUsers,
-                    previous_task_id: taskId
+                    previous_task_id: taskId,
+                    no_ai_processing: noAIProcessing
                 }),
             });
             const createData = await createResponse.json();
@@ -279,11 +281,13 @@ function TaskView() {
         }
     };
 
-    // Add useEffect to initialize selected users when opening reply modal
+    // Add useEffect to initialize selected users and noAIProcessing when opening reply modal
     useEffect(() => {
         if (showReplyModal && task) {
             // Initialize with current task's assignees
             setSelectedUsers(task.assignedUsers);
+            // Initialize noAIProcessing to the inverse of the previous task's furtherNalAIProcessingNeeded
+            setNoAIProcessing(task.furtherNalAIProcessingNeeded === false);
         }
     }, [showReplyModal, task]);
 
@@ -404,6 +408,17 @@ function TaskView() {
                                     placeholder="Enter your reply..."
                                     rows="4"
                                 />
+                            </div>
+                            <div className="form-group">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={noAIProcessing}
+                                        onChange={e => setNoAIProcessing(e.target.checked)}
+                                        style={{ marginRight: '8px' }}
+                                    />
+                                    Do NOT do AI processing on this task
+                                </label>
                             </div>
                             <div className="form-group">
                                 <label>Assign to:</label>
