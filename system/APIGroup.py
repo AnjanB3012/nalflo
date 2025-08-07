@@ -27,12 +27,13 @@ class APIGroup:
         return f"APIGroup(apiGroupName={self.apiGroupName}, apiGroupDescription={self.apiGroupDescription}, apis={self.apis})"
     
     def toAIString(self) -> str:
+        apis_string = '\n'.join(api.toAIString() for api in self.apis)
         return f"""
 <API Group Name>
 {self.apiGroupName}
 <API Group Description>
 {self.apiGroupDescription}
 <APIs>
-{'\n'.join(api.toAIString() for api in self.apis)}
+{apis_string}
 </APIs>
 """

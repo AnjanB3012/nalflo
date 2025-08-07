@@ -15,6 +15,14 @@ function API()
     const [files, setFiles] = useState([]);
     const [uploadError, setUploadError] = useState("");
     const [uploadSuccess, setUploadSuccess] = useState("");
+    const [packageList, setPackageList] = useState([]);
+    const [packageLoading, setPackageLoading] = useState(false);
+    const [packageError, setPackageError] = useState("");
+    const [packageSuccess, setPackageSuccess] = useState("");
+    const [installInput, setInstallInput] = useState("");
+    const [restartLoading, setRestartLoading] = useState(false);
+    const [restartError, setRestartError] = useState("");
+    const [restartSuccess, setRestartSuccess] = useState("");
     const navigate = useNavigate();
     useEffect(() => {
         const fetchData = async () => {
@@ -98,7 +106,40 @@ function API()
             }
         }
         fetchData();
-    }, []);
+    }, [navigate]);
+
+    // Fetch package list if system permission
+    useEffect(() => {
+        const fetchPackages = async () => {
+            if (!permissions?.system) return;
+            setPackageLoading(true);
+            setPackageError("");
+            setPackageSuccess("");
+            try {
+                const cookieData = localStorage.getItem("local_cookie");
+                if (!cookieData) return;
+                const parsedCookie = JSON.parse(cookieData);
+                const cookieToken = parsedCookie.token;
+                const apiBaseUrl = await getApiBaseUrl();
+                const response = await fetch(`${apiBaseUrl}/system/get_package_list`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ cookie_token: cookieToken })
+                });
+                const data = await response.json();
+                if (data.message === "Success") {
+                    setPackageList(data.packages || []);
+                } else {
+                    setPackageError(data.message || "Failed to fetch packages");
+                }
+            } catch (e) {
+                setPackageError("Failed to fetch packages");
+            } finally {
+                setPackageLoading(false);
+            }
+        };
+        fetchPackages();
+    }, [permissions]);
 
     const handleFileUpload = async (event) => {
         const file = event.target.files[0];
@@ -312,6 +353,130 @@ function API()
         }
     };
 
+    // Handler: Install package
+    const handleInstallPackage = async () => {
+        setPackageLoading(true);
+        setPackageError("");
+        setPackageSuccess("");
+        try {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) return;
+            const parsedCookie = JSON.parse(cookieData);
+            const cookieToken = parsedCookie.token;
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/system/install_package`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cookie_token: cookieToken, package_name: installInput })
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setPackageSuccess("Package installed successfully!");
+                setInstallInput("");
+                // Refresh package list
+                setTimeout(() => setPackageSuccess(""), 2000);
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                setPackageError(data.message || "Failed to install package");
+            }
+        } catch (e) {
+            setPackageError("Failed to install package");
+        } finally {
+            setPackageLoading(false);
+        }
+    };
+
+    // Handler: Uninstall package
+    const handleUninstallPackage = async (pkg) => {
+        setPackageLoading(true);
+        setPackageError("");
+        setPackageSuccess("");
+        try {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) return;
+            const parsedCookie = JSON.parse(cookieData);
+            const cookieToken = parsedCookie.token;
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/system/uninstall_package`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cookie_token: cookieToken, package_name: pkg })
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setPackageSuccess("Package uninstalled successfully!");
+                setTimeout(() => setPackageSuccess(""), 2000);
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                setPackageError(data.message || "Failed to uninstall package");
+            }
+        } catch (e) {
+            setPackageError("Failed to uninstall package");
+        } finally {
+            setPackageLoading(false);
+        }
+    };
+
+    // Handler: Test package
+    const handleTestPackage = async (pkg) => {
+        setPackageLoading(true);
+        setPackageError("");
+        setPackageSuccess("");
+        try {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) return;
+            const parsedCookie = JSON.parse(cookieData);
+            const cookieToken = parsedCookie.token;
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/system/test_package`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cookie_token: cookieToken, package_name: pkg })
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setPackageSuccess("Package test successful!");
+                setTimeout(() => setPackageSuccess(""), 2000);
+            } else {
+                setPackageError(data.message || "Failed to test package");
+            }
+        } catch (e) {
+            setPackageError("Failed to test package");
+        } finally {
+            setPackageLoading(false);
+        }
+    };
+
+    // Handler: Restart server
+    const handleRestartServer = async () => {
+        setRestartLoading(true);
+        setRestartError("");
+        setRestartSuccess("");
+        try {
+            const cookieData = localStorage.getItem("local_cookie");
+            if (!cookieData) return;
+            const parsedCookie = JSON.parse(cookieData);
+            const cookieToken = parsedCookie.token;
+            const apiBaseUrl = await getApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/system/restart`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cookie_token: cookieToken })
+            });
+            const data = await response.json();
+            if (data.message === "Success") {
+                setRestartSuccess("Server restart requested!");
+                setTimeout(() => setRestartSuccess(""), 2000);
+            } else {
+                setRestartError(data.message || "Failed to restart server");
+            }
+        } catch (e) {
+            setRestartError("Failed to restart server");
+        } finally {
+            setRestartLoading(false);
+        }
+    };
+
     if (error) {
         return (
             <div className="iam-container">
@@ -489,6 +654,53 @@ function API()
                         </tbody>
                     </table>
                 </div>
+                {permissions?.system && (
+                    <div className="card">
+                        <div className="card-header">
+                            <h2 className="card-title">Python Package Management</h2>
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <input
+                                type="text"
+                                placeholder="Enter package name (e.g. requests)"
+                                value={installInput}
+                                onChange={e => setInstallInput(e.target.value)}
+                                style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ccc', marginRight: '10px', minWidth: '220px' }}
+                                disabled={packageLoading}
+                            />
+                            <button className="button button-primary" onClick={handleInstallPackage} disabled={packageLoading || !installInput}>
+                                Install Package
+                            </button>
+                        </div>
+                        {packageError && <div className="error-message">{packageError}</div>}
+                        {packageSuccess && <div className="success-message">{packageSuccess}</div>}
+                        <div style={{ marginBottom: '1rem' }}>
+                            <h3>Installed Packages</h3>
+                            {packageLoading ? (
+                                <div>Loading packages...</div>
+                            ) : (
+                                <ul style={{ listStyle: 'none', padding: 0 }}>
+                                    {packageList && packageList.length > 0 ? packageList.map((pkg, idx) => (
+                                        <li key={pkg+idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid #eee' }}>
+                                            <span style={{ fontWeight: 500 }}>{pkg}</span>
+                                            <span>
+                                                <button className="button button-success" style={{ marginRight: '8px' }} onClick={() => handleTestPackage(pkg)} disabled={packageLoading}>Test</button>
+                                                <button className="button button-danger" onClick={() => handleUninstallPackage(pkg)} disabled={packageLoading}>Uninstall</button>
+                                            </span>
+                                        </li>
+                                    )) : <li>No packages found.</li>}
+                                </ul>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+                            <button className="button button-primary" style={{ fontSize: '1.3rem', padding: '1rem 3rem', background: 'linear-gradient(90deg, #2563eb, #1d4ed8)' }} onClick={handleRestartServer} disabled={restartLoading}>
+                                {restartLoading ? 'Restarting...' : 'Restart Server'}
+                            </button>
+                        </div>
+                        {restartError && <div className="error-message">{restartError}</div>}
+                        {restartSuccess && <div className="success-message">{restartSuccess}</div>}
+                    </div>
+                )}
             </div>
         </div>
     );

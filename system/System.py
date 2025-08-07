@@ -17,6 +17,7 @@ import time
 from datetime import datetime, timezone, timedelta
 import Nalva
 import uuid
+from typing import Union, List
 
 
 
@@ -24,7 +25,7 @@ def findUniqueTaskID(tasksList) -> int:
     """
     Helper function to find a unique task ID
     Args:
-        tasksList (list[Task]): The list of tasks
+        tasksList (List[Task]): The list of tasks
     Returns:
         int: A unique task ID
     """
@@ -39,7 +40,7 @@ def findTaskByID(taskID: int, tasksList) -> Task:
     Helper function to find a task by its ID
     Args:
         taskID (int): The ID of the task
-        tasksList (list[Task]): The list of tasks to search
+        tasksList (List[Task]): The list of tasks to search
     Returns:
         Task: The task with the ID, None if not found
     """
@@ -53,7 +54,7 @@ def findRoleByTitle(inputTitle: str, rolesList) -> Role:
     Helper function to find a role by its title
     Args:
         inputTitle (str): The title of the role
-        rolesList (list[Role]): The list of roles to search
+        rolesList (List[Role]): The list of roles to search
     Returns:
         Role: The role with the title, None if not found
     """
@@ -67,7 +68,7 @@ def findUserByUserName(inputUserName: str, usersList) -> User:
     Helper function to find a user by its username
     Args:
         inputUserName (str): The username of the user
-        usersList (list[User]): The list of users to search
+        usersList (List[User]): The list of users to search
     Returns:
         User: The user with the username, None if not found
     """
@@ -81,7 +82,7 @@ def findGroupByName(inputName: str, groupsList) -> Group:
     Helper function to find a group by its name
     Args:
         inputName (str): The name of the group
-        groupsList (list[Group]): The list of groups to search
+        groupsList (List[Group]): The list of groups to search
     Returns:
         Group: The group with the name, None if not found
     """
@@ -95,7 +96,7 @@ def findAPIbyName(inputName: str, apisList) -> API:
     Helper function to find an API by its name
     Args:
         inputName (str): The name of the API
-        apisList (list[API]): The list of APIs to search
+        apisList (List[API]): The list of APIs to search
     Returns:
         API: The API with the name, None if not found
     """
@@ -111,9 +112,9 @@ class System:
         customerName (str): The name of the customer
         contactEmail (str): The contact email of the customer
         domain (str): The domain of the customer
-        groups (list[Group]): The list of groups in the system
-        roles (list[Role]): The list of roles in the system
-        users (list[User]): The list of users in the system
+        groups (List[Group]): The list of groups in the system
+        roles (List[Role]): The list of roles in the system
+        users (List[User]): The list of users in the system
     Methods:
         setUpInstance(customerName:str, adminPassword:str, contactEmail:str, domain:str): Sets up the instance
         saveInstance(): Saves the instance to an XML file
@@ -170,7 +171,8 @@ class System:
             "AssignToAll": True,
             "development": True,
             "management": True,
-            "nalva": True
+            "nalva": True,
+            "system": True
         })
         tempGroup = Group.Group("Global Admins","A Group of all global admins")
         tempUser = User.User(f"admin@{domain}",adminPassword,tempRole,[tempGroup],[],"System Admin")
@@ -676,14 +678,14 @@ Required JSON:
         """
         return findUserByUserName(username,self.users)
 
-    def createUser(self, username: str, password: str, roleName: str, groupNames: list[str] | None = None, name: str = ""):
+    def createUser(self, username: str, password: str, roleName: str, groupNames: Union[List[str], None] = None, name: str = ""):
         """
         Method to create a user
         Args:
             username (str): The username of the user
             password (str): The password of the domain
             roleName (str): The name of the role of the user
-            groupNames (list[str]): The names of the groups the user is in
+            groupNames (List[str]): The names of the groups the user is in
         """
         role = findRoleByTitle(roleName, self.roles)
         if role is None:
@@ -823,16 +825,16 @@ Required JSON:
         """
         Method to get the groups in the system
         Returns:
-            list[Group]: The list of groups in the system
+            List[Group]: The list of groups in the system
         """
         return self.groups
     
-    def addUserToGroups(self, username:str, groupNames:list[str]):
+    def addUserToGroups(self, username:str, groupNames:List[str]):
         """
         Method to add a user to groups
         Args:
             username (str): The username of the user
-            groupNames (list[str]): The names of the groups
+            groupNames (List[str]): The names of the groups
         """
         tempUser = findUserByUserName(username,self.users)
         if tempUser:
@@ -850,7 +852,7 @@ Required JSON:
         """
         Method to get the roles in the system
         Returns:
-            list[Role]: The list of roles in the system
+            List[Role]: The list of roles in the system
         """
         return self.roles
     
@@ -878,7 +880,7 @@ Required JSON:
         """
         Method to get the users in the system
         Returns:
-            list[User]: The list of users in the system
+            List[User]: The list of users in the system
         """
         return self.users
     
@@ -890,11 +892,11 @@ Required JSON:
         """
         return self.domain
     
-    def getPermissions(self) -> list[str]:
+    def getPermissions(self) -> List[str]:
         """
         Method to get the permissions of the system
         Returns:
-            list[str]: The permissions of the system
+            List[str]: The permissions of the system
         """
         return self.permissions
 
@@ -1002,15 +1004,15 @@ Required JSON:
         # Remove group from system
         self.groups.remove(group)
 
-    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: list[str], creatorUser: User, previousTask: list[Task.Task] | None = None, furtherNalAIProcessingNeeded: bool = True):
+    def createTask(self, taskTitle: str, taskDescription: str, taskAssignees: List[str], creatorUser: User, previousTask: Union[List[Task.Task], None] = None, furtherNalAIProcessingNeeded: bool = True):
         """
         Method to create a new task
         Args:
             taskTitle (str): The title of the task
             taskDescription (str): The description of the task
-            taskAssignees (list[str]): The list of usernames to assign the task to
+            taskAssignees (List[str]): The list of usernames to assign the task to
             creatorUser (User): The user creating the task
-            previousTask (list[Task]): The list of previous tasks (for replies)
+            previousTask (List[Task]): The list of previous tasks (for replies)
             furtherNalAIProcessingNeeded (bool): Whether to do further AI processing (default True)
         """
         # Check for duplicate tasks
@@ -1077,7 +1079,7 @@ Required JSON:
         """
         Method to get all APIs in the system (flattened from all groups)
         Returns:
-            list[API]: The list of all APIs in the system
+            List[API]: The list of all APIs in the system
         """
         all_apis = []
         for api_group in self.apiGroups:
@@ -1088,7 +1090,7 @@ Required JSON:
         """
         Method to get the API groups in the system
         Returns:
-            list[APIGroup]: The list of API groups in the system
+            List[APIGroup]: The list of API groups in the system
         """
         return self.apiGroups
     
@@ -1442,11 +1444,11 @@ Required JSON:
         """
         return self.conversationHistory.get(username, {})
 
-    def getTasksWithReplies(self) -> list[Task.Task]:
+    def getTasksWithReplies(self) -> List[Task.Task]:
         """
         Gets all tasks that have reply tasks
         Returns:
-            list[Task]: List of tasks that have reply tasks
+            List[Task]: List of tasks that have reply tasks
         """
         return [task for task in self.tasks if task.getReplyTask() is not None]
 
@@ -1454,17 +1456,17 @@ Required JSON:
         """
         Method to get the tasks in the system
         Returns:
-            list[Task]: The list of tasks in the system
+            List[Task]: The list of tasks in the system
         """
         return self.tasks
     
-    def getAccessableUsers(self, signedInUser: str) -> list[str]:
+    def getAccessableUsers(self, signedInUser: str) -> List[str]:
         """
         Gets the accessable users for a signed in user
         Args:
             signedInUser (str): The username of the signed in user
         Returns:
-            list[str]: The list of accessable users
+            List[str]: The list of accessable users
         """
         returningList = []
         thisUser = self.getUser(signedInUser)
@@ -1475,13 +1477,13 @@ Required JSON:
                 returningList.extend([user.getUserName() for user in group.getUsers()])
             return returningList
         
-    def getAccessableGroups(self, signedInUser: str) -> list[str]:
+    def getAccessableGroups(self, signedInUser: str) -> List[str]:
         """
         Gets the accessable groups for a signed in user
         Args:
             signedInUser (str): The username of the signed in user
         Returns:
-            list[str]: The list of accessable groups
+            List[str]: The list of accessable groups
         """
         returningList = []
         thisUser = self.getUser(signedInUser)
@@ -1493,14 +1495,14 @@ Required JSON:
             return returningList   
         
 
-    def queryRecentTasks(self, signedInUser: str, taskCount: int) -> list[Task.Task]:
+    def queryRecentTasks(self, signedInUser: str, taskCount: int) -> List[Task.Task]:
         """
         Queries the recent tasks for a signed in user
         Args:
             signedInUser (str): The username of the signed in user
             taskCount (int): The number of tasks to query
         Returns:
-            list[Task]: The list of recent tasks
+            List[Task]: The list of recent tasks
         """
         thisUserTasks = []
         for task in self.tasks:
@@ -1508,14 +1510,14 @@ Required JSON:
                 thisUserTasks.append(task)
         return thisUserTasks[-taskCount:]
     
-    def queryRecentOpenTasks(self, signedInUser: str, taskCount: int) -> list[Task.Task]:
+    def queryRecentOpenTasks(self, signedInUser: str, taskCount: int) -> List[Task.Task]:
         """
         Queries the recent open tasks for a signed in user
         Args:
             signedInUser (str): The username of the signed in user
             taskCount (int): The number of tasks to query
         Returns:
-            list[Task]: The list of recent open tasks
+            List[Task]: The list of recent open tasks
         """
         thisUserTasks = []
         numberQueried = 0

@@ -19,6 +19,7 @@ import sys
 from threading import Event
 import time
 import textwrap
+import requests
 
 app = Flask(__name__)
 app.secret_key = "StoreKey1"
@@ -1533,6 +1534,124 @@ def getNalvaConversationHistory():
             return jsonify({"message": "Permission Denied"})
     else:
         return jsonify({"message": "Failed"})
+    
+@app.route('/system/restart', methods=['POST'])
+def restartSystem():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['system']:
+            temp_url = os.getenv("HOST_SERVER")+"/server/restart/"+os.getenv("FLASK_PORT")
+            temp_headers = {
+                "Content-Type": "application/json",
+            }
+            temp_data = {
+                "admin_username": os.getenv("ADMIN_USERNAME"),
+                "admin_password": os.getenv("ADMIN_PASSWORD")
+            }
+            response = requests.post(f"{temp_url}", headers=temp_headers, json=temp_data)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "access denied"})
+    
+@app.route('/system/install_package', methods=['POST'])
+def installPackage():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['system']:
+            temp_url = os.getenv("HOST_SERVER")+"/server/packagename/install/"+os.getenv("FLASK_PORT")
+            temp_headers = {
+                "Content-Type": "application/json",
+            }
+            temp_data = {
+                "admin_username": os.getenv("ADMIN_USERNAME"),
+                "admin_password": os.getenv("ADMIN_PASSWORD"),
+                "package_name": data.get("package_name")
+            }
+            response = requests.post(f"{temp_url}", headers=temp_headers, json=temp_data)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "access denied"})
+    
+@app.route('/system/uninstall_package', methods=['POST'])
+def uninstallPackage():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['system']:
+            temp_url = os.getenv("HOST_SERVER")+"/server/packagename/uninstall/"+os.getenv("FLASK_PORT")
+            temp_headers = {
+                "Content-Type": "application/json",
+            }
+            temp_data = {
+                "admin_username": os.getenv("ADMIN_USERNAME"),
+                "admin_password": os.getenv("ADMIN_PASSWORD"),
+                "package_name": data.get("package_name")
+            }
+            response = requests.post(f"{temp_url}", headers=temp_headers, json=temp_data)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "access denied"})
+    
+@app.route('/system/test_package', methods=['POST'])
+def testPackage():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['system']:
+            temp_url = os.getenv("HOST_SERVER")+"/server/packagename/test/"+os.getenv("FLASK_PORT")
+            temp_headers = {
+                "Content-Type": "application/json",
+            }
+            temp_data = {
+                "admin_username": os.getenv("ADMIN_USERNAME"),
+                "admin_password": os.getenv("ADMIN_PASSWORD"),
+                "package_name": data.get("package_name")
+            }
+            response = requests.post(f"{temp_url}", headers=temp_headers, json=temp_data)
+            return jsonify({"message": "Success"})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "access denied"})
+    
+@app.route('/system/get_package_list', methods=['POST'])
+def getPackageList():
+    data = request.get_json()
+    cookie_token = data.get('cookie_token')
+    if cookie_token in cookies:
+        username = cookies[cookie_token][0]
+        user = thisSystem.getUser(username=username)
+        if user.getRole().getPermissions()['system']:
+            temp_url = os.getenv("HOST_SERVER")+"/server/get_instance_packages/"+os.getenv("FLASK_PORT")
+            temp_headers = {
+                "Content-Type": "application/json",
+            }
+            temp_data = {
+                "admin_username": os.getenv("ADMIN_USERNAME"),
+                "admin_password": os.getenv("ADMIN_PASSWORD")
+            }
+            response = requests.post(f"{temp_url}", headers=temp_headers, json=temp_data)
+            return jsonify({"message": "Success", "packages": response.json()})
+        else:
+            return jsonify({"message": "Permission Denied"})
+    else:
+        return jsonify({"message": "access denied"})
 
 def signal_handler(signum, frame):
     """Handle termination signals by saving the instance"""
@@ -1549,4 +1668,4 @@ if __name__ == '__main__':
     import os
     from dotenv import load_dotenv
     load_dotenv()
-    app.run(debug=True, host="0.0.0.0", port=os.getenv("PORT_SERVER"), use_reloader=False)
+    app.run(debug=True, host="0.0.0.0", port=os.getenv("FLASK_PORT"), use_reloader=False)

@@ -129,7 +129,7 @@ First API Access:
 
 The first API available to you:
 
-Endpoint: /ai/getSystemAPIs
+Endpoint: /ai/getSystemAPIGroups
 
 Description: Retrieves all APIs in the system. Returns a list of API objects with their details.
 
@@ -139,11 +139,11 @@ Do not call this API immediately.
 
 First, analyze the task to decide if action is needed.
 
-Only if action is needed, call /ai/getSystemAPIs to retrieve the list of available APIs.
+Only if action is needed, call /ai/getSystemAPIGroups to retrieve the list of available APIs.
 
 Important:
 
-Fetching /ai/getSystemAPIs is not the end of your task.
+Fetching /ai/getSystemAPIGroups is not the end of your task.
 
 After fetching, reassess the task.
 
@@ -171,7 +171,7 @@ A user (e.g., Test 1) creates a task: \"Forward this to Test 2\" without assigni
 
 Your steps:
 
-Call /ai/getSystemAPIs to get available APIs.
+Call /ai/getSystemAPIGroups to get available APIs.
 
 Call getSystemUsers to find the user.
 

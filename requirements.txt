@@ -9,3 +9,4 @@ werkzeug
 uuid
 google-genai
 gunicorn
+openai

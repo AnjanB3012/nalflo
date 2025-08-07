@@ -194,11 +194,11 @@ class User:
         <User_Name>{self.userName}</User_Name>
         <User_Name>{self.name}</User_Name>
         <User_Role_Info>
-        {str(self.roleInfo)}
+        {str(self.roleInfo.getDetails()[0])}
         </User_Role_Info>
         <User_In_Groups>
         """
         for i in self.groups:
-            returningString += str(i)
+            returningString += str(i.getDetails()[0])
         returningString += "</User_In_Groups>"
         return returningString

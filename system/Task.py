@@ -18,7 +18,7 @@ class Task:
     def aiPass(self) -> str:
         usersStr = ""
         for tempUser in self.assignedUsers:
-            usersStr += str(tempUser)
+            usersStr += str(tempUser.getDetails()[0])
         return f"""
         <task_title>{self.title}</task_title>
         <task_description>{self.description}</task_description>
@@ -111,16 +111,28 @@ class Task:
         Returns:
             str: The task as an AI string
         """
+        usersStr = ""
+        for tempUser in self.assignedUsers:
+            usersStr += str(tempUser.getDetails()[0])
+        previousTaskStr = ""
+        for tempTask in self.previousTask:
+            previousTaskStr += str(tempTask.getDetails()[0])
         return f"""
         <Task_ID>{self.taskId}</Task_ID>
         <Task_Title>{self.title}</Task_Title>
         <Task_Description>{self.description}</Task_Description>
         <Task_Creation_Timestamp>{self.creationTimeStamp}</Task_Creation_Timestamp>
-        <Task_Assigned_Users>{self.assignedUsers}</Task_Assigned_Users>
-        <Task_Creator_User>{self.creatorUser}</Task_Creator_User>
+        <Task_Assigned_Users>
+        {usersStr}
+        </Task_Assigned_Users>
+        <Task_Creator_User>{self.creatorUser.getDetails()[0]}</Task_Creator_User>
         <Task_Status>{self.status}</Task_Status>
-        <Task_Previous_Task>{self.previousTask}</Task_Previous_Task>
-        <Task_Reply_Task>{self.replyTask}</Task_Reply_Task>
+        <Task_Previous_Task>
+        {previousTaskStr}
+        </Task_Previous_Task>
+        <Task_Reply_Task>
+        {self.replyTask.getDetails()[0] if self.replyTask is not None else ""}
+        </Task_Reply_Task>
         <Task_Further_NalAI_Processing_Needed>{self.furtherNalAIProcessingNeeded}</Task_Further_NalAI_Processing_Needed>
         """
     

@@ -15,3 +15,4 @@ system/__pycache__/
 test.py
 testing.xml
 instance*.xml
+.DS_Store

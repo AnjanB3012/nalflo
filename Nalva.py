@@ -7,20 +7,25 @@ import requests
 import json
 from dotenv import load_dotenv
 import os
-from google import genai
-from google.genai import types
+from AIProcessor import AIProcessor
 
 
 class Nalva:
-    def __init__(self,nalvaAccessToken: str, userName: str, FirstMessage: str, conversationID: int = 1, businessRules: list = [], setupMode: bool = False):
+    def __init__(self, nalvaAccessToken: str, userName: str, FirstMessage: str, conversationID: int = 1, businessRules: list = [], setupMode: bool = False, ai_type: str = "OpenAI"):
         self.userName = userName
         self.conversationHistory = []
         self.response_queue = queue.Queue()
         self.processing_thread = None
         self.is_processing = False
         self.setupMode = setupMode
+        self.ai_type = ai_type
+        
+        # Initialize AIProcessor
+        self.ai_processor = AIProcessor(type=ai_type)
+        
         # Initialize the conversation object for AI calls
         self.conversation = []
+        
         # Add first message with metadata
         self.conversationHistory.append({
             "type": "user",
@@ -28,13 +33,13 @@ class Nalva:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversationID": conversationID
         })
+        
         # Add first message to conversation
-        self.conversation.append(
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=FirstMessage)],
-            )
-        )
+        self.conversation.append({
+            "type": "user",
+            "message": FirstMessage
+        })
+            
         self.nalvaAccessToken = nalvaAccessToken
         self.businessRules = businessRules
         self.testingVals = pyhold("testing.xml")
@@ -90,12 +95,10 @@ class Nalva:
             })
             
             # Append Nalva's final response to conversation
-            self.conversation.append(
-                types.Content(
-                    role="model",
-                    parts=[types.Part.from_text(text=replyMsg)],
-                )
-            )
+            self.conversation.append({
+                "type": "assistant",
+                "message": replyMsg
+            })
             
             # Put response in queue
             self.response_queue.put({
@@ -122,12 +125,10 @@ class Nalva:
         })
         
         # Append new message to conversation
-        self.conversation.append(
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=inputMessage)],
-            )
-        )
+        self.conversation.append({
+            "type": "user",
+            "message": inputMessage
+        })
         
         # Only start processing if not in setup mode
         if not self.setupMode:
@@ -162,7 +163,19 @@ class Nalva:
         """Reset the total token count to 0"""
         self.testingVals["totalTokens"] = 0
     
-    def perform_ai_call(self,prompt, aiAccessToken_token, businessRules_param):
+    def _update_token_count(self, estimated_tokens: int = None):
+        """Update token count - placeholder for future token counting integration"""
+        if estimated_tokens:
+            self.testingVals["totalTokens"] += estimated_tokens
+        # For now, we'll use a rough estimation based on conversation length
+        # In the future, this could be integrated with AIProcessor's token counting
+        else:
+            # Rough estimation: ~4 characters per token
+            total_chars = sum(len(msg.get("message", "")) for msg in self.conversation)
+            estimated_tokens = total_chars // 4
+            self.testingVals["totalTokens"] = estimated_tokens
+    
+    def perform_ai_call(self, prompt, aiAccessToken_token, businessRules_param):
         load_dotenv()
         dict_response = {
             "isStep": True,
@@ -177,7 +190,7 @@ class Nalva:
         
         # Cache the system instruction to avoid recreating it every time
         if not hasattr(self, '_cached_system_instruction'):
-            self._cached_system_instruction = types.Part.from_text(text=f"""
+            self._cached_system_instruction = f"""
 You are Nalva, a conversational intelligent agent designed to understand user requests and perform actions or tasks based on conversations. You interact with APIs to fulfill the user's needs in a friendly and helpful manner.
 
 Your objective is to:
@@ -289,7 +302,15 @@ Username of the user conversing with you is: {self.userName}
 keep this username in mind while fetching data from the APIs or creating tasks.
 Business Rules:
 {businessRules_param}
-""")
+"""
+        
+        # Define the expected response properties
+        properties = {
+            "isStep": "boolean",
+            "to_user_response": "string",
+            "API_EndPoint": "string",
+            "Body_Parameters_JSON": "string"
+        }
         
         while dict_response["isStep"]:
             print(next_prompt)
@@ -297,81 +318,37 @@ Business Rules:
             retry_index = 0
             while True:
                 try:
-                    client = genai.Client(
-                        api_key = os.getenv("GOOGLE_API_KEY")
-                    )
-                    model = "gemini-2.5-flash-preview-05-20"
-                    generate_content_config = types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=genai.types.Schema(
-                            type = genai.types.Type.OBJECT,
-                            properties = {
-                                "isStep": genai.types.Schema(
-                                    type = genai.types.Type.BOOLEAN,
-                                ),
-                                "to_user_response": genai.types.Schema(
-                                    type = genai.types.Type.STRING,
-                                ),
-                                "API_EndPoint": genai.types.Schema(
-                                    type = genai.types.Type.STRING,
-                                ),
-                                "Body_Parameters_JSON": genai.types.Schema(
-                                    type = genai.types.Type.STRING,
-                                ),
-                            },
-                        ),
-                        system_instruction=[self._cached_system_instruction]
-                    )
-                    output = ""
-                    # Count tokens for the current conversation before making the call
-                    token_count_response = client.models.count_tokens(
-                        model=model,
-                        contents=self.conversation
-                    )
-                    current_tokens = token_count_response.total_tokens
-                    
-                    # Generate content and collect response
-                    response_stream = client.models.generate_content_stream(
-                        model=model,
-                        contents=self.conversation,
-                        config=generate_content_config,
+                    # Use AIProcessor to handle the AI call
+                    output = self.ai_processor.process(
+                        system_instruction=self._cached_system_instruction,
+                        user_prompt=next_prompt,
+                        properties=properties,
+                        previous_responses=self.conversation
                     )
                     
-                    # Collect the response and get usage metadata
-                    response_chunks = []
-                    for chunk in response_stream:
-                        response_chunks.append(chunk)
-                        output += chunk.text
+                    # Update token count
+                    self._update_token_count()
                     
-                    # Get the last chunk to access usage metadata
-                    if response_chunks:
-                        last_chunk = response_chunks[-1]
-                        if hasattr(last_chunk, 'usage_metadata') and last_chunk.usage_metadata:
-                            # Add the total tokens used in this call to our counter
-                            self.testingVals["totalTokens"] += last_chunk.usage_metadata.total_token_count
-                        else:
-                            # Fallback: add the counted tokens if usage_metadata is not available
-                            self.testingVals["totalTokens"] += current_tokens
+                    # Parse the response (remove JSON wrapper if present)
+                    if output.startswith('"') and output.endswith('"'):
+                        output = json.loads(output)
                     
                     dict_response = json.loads(output)
                     print(dict_response)
+                    
                     if dict_response["isStep"]:
                         response = self.perform_api_call(dict_response["API_EndPoint"], json.loads(dict_response["Body_Parameters_JSON"]), aiAccessToken_token)
                         next_prompt = response
                         # Append the AI response to conversation
-                        self.conversation.append(
-                            types.Content(
-                                role="model",
-                                parts=[types.Part.from_text(text=output)],
-                            )
-                        )
+                        self.conversation.append({
+                            "type": "assistant",
+                            "message": output
+                        })
                         # Append the API response to conversation
-                        self.conversation.append(
-                            types.Content(
-                                role="user",
-                                parts=[types.Part.from_text(text=next_prompt)],
-                            )
-                        )
+                        self.conversation.append({
+                            "type": "user",
+                            "message": next_prompt
+                        })
                     break  # Success, exit retry loop
                 except Exception as e:
                     print(f"Error processing task: {e}")
